@@ -42,7 +42,6 @@ vec2 ComplexMul(in vec2 A, in vec2 B)
 void main() {
    float aspect = (3.0/4.0);
    gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0);
-   gl_FragColor.xy = uv;
    vec2 pos = (uv*vec2(1.0, aspect)+vec2(1.0,1.0))*20.0;
    pos = ComplexMul(normalize(vec2(1.0, 1.0)), pos);
    vec2 tile = ceil(pos);

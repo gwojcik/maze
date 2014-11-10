@@ -32,7 +32,8 @@
       <script src="graphic.js"></script>
       <script src="game.js"></script>
    </head>
-   <body onload="(new Game()).init();">
-      <canvas id="gl" width="800" height="600"> </canvas>
+   <body onload="game = new Game(); game.init();">
+      <canvas id="gl" width="400" height="300"> </canvas>
+      <canvas id="gl_js" width="400" height="300"> </canvas>
    </body>
 </html>

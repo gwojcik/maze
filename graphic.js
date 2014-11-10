@@ -31,7 +31,7 @@ function Graphic() {
 
 Graphic.prototype.init = function(hP) {
    this.canvas = document.getElementById(hP.canvas);
-   this.size = {x: this.canvas.height, y: this.canvas.width};
+   this.size = {x: this.canvas.width, y: this.canvas.height};
    this.initWebGL();
 
    gl.clearColor(1.0, 0.0, 0.0, 1.0);
@@ -47,7 +47,7 @@ Graphic.prototype.initWebGL = function() {
    gl = null;
 
    try {
-      gl = this.canvas.getContext('webgl');
+      gl = this.canvas.getContext('webgl', {preserveDrawingBuffer: true});
       if (! gl) {
          console.log('experimental webgl');
          gl = this.canvas.getContext('experimental-webgl');
