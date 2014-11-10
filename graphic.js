@@ -111,7 +111,7 @@ Graphic.prototype.loadProgram = function(vertex, fragment, attribs){
 
 Graphic.prototype.loadShaderFile = function(file){
    var request = new XMLHttpRequest();
-   request.open('POST', file, false);
+   request.open('GET', file, false);
    request.overrideMimeType("x-shader/x-fragment");
    request.send();
    if (request.status != 200){
