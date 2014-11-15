@@ -32,11 +32,12 @@
       <script src="graphic.js"></script>
       <script src="game.js"></script>
    </head>
-   <body onload="game = new Game(); game.init();">
+   <body onload="game = new Game(); game.init();" onkeydown="game.keyDownEvent(event)" onkeyup="game.keyUpEvent(event)">
       <canvas id="gl" width="800" height="600"> </canvas>
       <canvas id="gl_js" width="800" height="600"> </canvas>
       <div>
          <button type="button" onclick="game.genNewMaze=true">New maze</button>
+         <input id="Frame" value=0 type="text" disabled>
       </div>
    </body>
 </html>
