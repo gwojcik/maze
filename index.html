@@ -33,7 +33,10 @@
       <script src="game.js"></script>
    </head>
    <body onload="game = new Game(); game.init();">
-      <canvas id="gl" width="400" height="300"> </canvas>
-      <canvas id="gl_js" width="400" height="300"> </canvas>
+      <canvas id="gl" width="800" height="600"> </canvas>
+      <canvas id="gl_js" width="800" height="600"> </canvas>
+      <div>
+         <button type="button" onclick="game.genNewMaze=true">New maze</button>
+      </div>
    </body>
 </html>
