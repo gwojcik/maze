@@ -24,6 +24,7 @@ for the JavaScript code in this page.
 */
 
 (function() {
+"use strict";
 var gl;
 
 function Graphic() {

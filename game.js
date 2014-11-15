@@ -27,6 +27,7 @@ function Game() {
 }
 
 Game.prototype.init = function() {
+   "use strict";
    this.graphic = new Graphic();
    this.graphic.init({canvas: 'gl'});
 
@@ -44,6 +45,7 @@ Game.prototype.init = function() {
 }
 
 Game.prototype.draw = function() {
+   "use strict";
    var that = this;
    var callback = function() {
       that.draw();
@@ -63,6 +65,7 @@ Game.prototype.draw = function() {
 }
 
 Game.prototype.dijkstra = function(maze, start, end) {
+   "use strict";
    var size = this.graphic.size;
    var P = new Int16Array(size.x * size.y);
 
@@ -144,6 +147,7 @@ Game.prototype.dijkstra = function(maze, start, end) {
 }
 
 Game.prototype.addStartAndExit = function(maze) {
+   "use strict";
    var size = this.graphic.size;
    var start = {};
    var end = {};
