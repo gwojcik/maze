@@ -182,7 +182,7 @@ float mazeDistance(vec2 pos) {
 void main() {
    float aspect = (3.0/4.0);
    gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0);
-   vec2 pos = ((uv+vec2(1.0, 1.0))*vec2(1.0, aspect))*20.0;
+   vec2 pos = ((uv+vec2(1.0, 1.0))*vec2(1.0, aspect))*10.0;
    if ( distance(pos, playerPos) < 0.2) {
       gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0);
       return;
@@ -192,19 +192,8 @@ void main() {
       return;
    }
 
+   pos = ComplexMul(pos, normalize(vec2(10000.0,10001.0)));
    float d = mazeDistance(pos);
 
-   d -= 0.1;
-   gl_FragColor.xyz = vec3(d);
-   if(d < 0.0) {
-      gl_FragColor.b = -d;
-   }
-   
-   //{
-   //   float d2 = wallDistance(tile, p);
-   //   if ( d2 > 0.2 && d2 < (sqrt(2.0)/2.0 - 0.2)) {
-   //      //gl_FragColor.xyz = vec3(0);
-   //   }
-   //   gl_FragColor.xyz = vec3(abs(d2));
-   //}
+   gl_FragColor.xyz = vec3(smoothstep(0.1, 0.15, d));
 }

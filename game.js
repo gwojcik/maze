@@ -36,6 +36,10 @@ Game.prototype.init = function() {
    this.timeStart = time.getTime();
    this.lastFrameTime = time.getTime();
 
+   this.debug = {
+      showSolution: false
+   };
+
    this.player = {
       pos: {
          x: 0.0,
@@ -210,37 +214,39 @@ Game.prototype.dijkstra = function(maze, start, end) {
    if (endValue == -1 || endValue == 8*1024) {
       return false;
    } else {
-      for(var i = 0; i< this.graphic.size.x * this.graphic.size.y; i++) {
-         var x = i%this.graphic.size.x;
-         var y = this.graphic.size.y - Math.floor(i/this.graphic.size.x);
-         var color = P[i]%256;
-         ctx.fillStyle="rgb(" + color + ',' + color + ',' + color + ')';
-         ctx.fillRect(x, y, 1, 1);
-      }
-      var v = end;
-      ctx.fillStyle="rgb(255,0,0)";
-      while (v.x != start.x || v.y != start.y) {
-         ctx.fillRect(v.x, this.graphic.size.y - v.y, 1, 1);
-         var minValue = 8*1024;
-         var minID = 0;
-         var vn;
-         var vecArray = [[0,1],[1,0],[0,-1],[-1,0]];
-         vecArray.forEach( function(dv) {
-            var tvn = {
-               x: v.x + dv[0],
-               y: v.y + dv[1]
-            };
-            if(tvn.x >= size.x || tvn.x < 0 || tvn.y >= size.y || tvn.y < 0) {
-               return;
-            }
-            var val = P[size.x*tvn.y + tvn.x];
-            if (val < minValue && val >= 0) {
-               minValue = val;
-               minID = i; 
-               vn = tvn;
-            }
-         });
-         v = vn;
+      if (this.debug.showSolution) {
+         for(var i = 0; i< this.graphic.size.x * this.graphic.size.y; i++) {
+            var x = i%this.graphic.size.x;
+            var y = this.graphic.size.y - Math.floor(i/this.graphic.size.x);
+            var color = P[i]%256;
+            ctx.fillStyle="rgb(" + color + ',' + color + ',' + color + ')';
+            ctx.fillRect(x, y, 1, 1);
+         }
+         var v = end;
+         ctx.fillStyle="rgb(255,0,0)";
+         while (v.x != start.x || v.y != start.y) {
+            ctx.fillRect(v.x, this.graphic.size.y - v.y, 1, 1);
+            var minValue = 8*1024;
+            var minID = 0;
+            var vn;
+            var vecArray = [[0,1],[1,0],[0,-1],[-1,0]];
+            vecArray.forEach( function(dv) {
+               var tvn = {
+                  x: v.x + dv[0],
+                  y: v.y + dv[1]
+               };
+               if(tvn.x >= size.x || tvn.x < 0 || tvn.y >= size.y || tvn.y < 0) {
+                  return;
+               }
+               var val = P[size.x*tvn.y + tvn.x];
+               if (val < minValue && val >= 0) {
+                  minValue = val;
+                  minID = i; 
+                  vn = tvn;
+               }
+            });
+            v = vn;
+         }
       }
       return true;
    }
@@ -271,8 +277,8 @@ Game.prototype.addStartAndExit = function(maze) {
       x /= imageSize.x;
       y /= imageSize.y;
       y *= (imageSize.y/imageSize.x);
-      x *= 2*20.0;
-      y *= 2*20.0;
+      x *= 2*10.0;
+      y *= 2*10.0;
       return {x: x, y: y};
    }
    console.log(this);
