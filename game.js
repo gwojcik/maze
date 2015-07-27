@@ -33,34 +33,53 @@ Game.prototype.init = function() {
    this.graphic.init({canvas: 'gl'});
 
    var time = new Date();
-   this.timeStart = time.getTime();
+   this.startTime = time.getTime();
    this.lastFrameTime = time.getTime();
+   this.changeGameState('NEW');
 
    this.debug = {
-      showSolution: false
+      showSolution: false,
+      noMazeValidation: false
    };
+
+   if (!this.debug.showSolution) {
+      var jsCanvas = document.getElementById('gl_js');
+      jsCanvas.style.display = 'none';
+   }
 
    this.player = {
       pos: {
          x: 0.0,
          y: 0.0
       },
+      r: 0.1,
       v: {
          x: 0.0,
          y: 0.0
+      },
+      wall: {
+         distance: 1,
+         dx: 1,
+         dy: 1
       }
    };
    this.exitPos = {
       x: 0.0,
       y: 0.0
    }
-   this.mazeSeed = 0;
+   this.mazeSeedValue = 0;
    this.keyInput = {};
    
    this.mazeShader = this.graphic.loadProgramFile("./simple.vert","./maze.frag");
-   this.mazeShaderSeed = this.graphic.gl.getUniformLocation(this.mazeShader, 'seed');
+   this.mazeSeed = this.graphic.gl.getUniformLocation(this.mazeShader, 'seed');
    this.mazePlayerPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'playerPos');
    this.mazeExitPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'exitPos');
+
+   this.distanceShader = this.graphic.loadProgramFile("./simple.vert","./maze.frag", {define: {GET_DISTANCE: 1}});
+   this.distanceFBO = this.graphic.createFBO({size: {x: 1, y: 1} });
+   this.distancePlayerPos = this.graphic.gl.getUniformLocation(this.distanceShader, 'playerPos');
+   this.distanceSeed = this.graphic.gl.getUniformLocation(this.distanceShader, 'seed');
+
    this.graphic.gl.useProgram(this.mazeShader);
 
    this.genNewMaze = true;
@@ -102,32 +121,62 @@ Game.prototype.draw = function() {
    };
    var time = (new Date()).getTime();
 
-   var thisFrameTime = time;
-   var frameTime = document.getElementById('Frame');
-   frameTime.value = thisFrameTime - this.lastFrameTime;
-   this.lastFrameTime = thisFrameTime;
+   this.updateGUI();
 
-   if(this.genNewMaze) {
-      this.mazeSeed = ((time/1000) & 0x3FF);
+
+   if (this.genNewMaze) {
+      this.startTime = time;
+      this.changeGameState('NEW');
+      this.mazeSeedValue = ((time/1000) & 0x3FF);
       this.player.pos = {x: 0, y:0};
       this.exitPos = {x: 0, y:0};
-      this.updateGraphic();
+      this.updateGraphic(1);
       this.graphic.draw();
       var P = new Uint8Array(4 * this.graphic.size.x * this.graphic.size.y);
       this.graphic.gl.readPixels(0, 0, this.graphic.size.x, this.graphic.size.y, this.graphic.gl.RGBA, this.graphic.gl.UNSIGNED_BYTE, P);
       this.addStartAndExit(P);
       this.genNewMaze = false;
    } else {
+      this.graphic.gl.useProgram(this.distanceShader);
       this.updatePlayer();
-      this.updateGraphic();
-      this.graphic.draw();
+      this.updateGraphic(2);
+      this.graphic.drawToFBO(this.distanceFBO, this.distanceShader);
+      var wall = this.graphic.readFromFBO(this.distanceFBO);
+      this.player.wall.distance = wall[0]/256;
+      this.player.wall.dx = (wall[1]/256 - 0.5) * 2.0 ;
+      this.player.wall.dy = (wall[2]/256 - 0.5) * 2.0 ;
+      this.playerColision();
+
+      this.graphic.gl.useProgram(this.mazeShader);
+      this.updateGraphic(1);
+      this.graphic.draw(this.mazeShader);
+
+      this.checkEndConditions();
    }
 
    window.requestAnimationFrame(callback,this.canvas);
 }
 
+Game.prototype.updateGUI = function() {
+   var time = (new Date()).getTime();
+
+   var gameTimeInput = document.getElementById('gameTime');
+   if (this.gameState == 'NEW') {
+      gameTimeInput.value = (time - this.startTime)/1000;
+   }
+
+   var thisFrameTime = time;
+   var frameTime = document.getElementById('Frame');
+   frameTime.value = thisFrameTime - this.lastFrameTime;
+   this.lastFrameTime = thisFrameTime;
+
+}
+
 Game.prototype.updatePlayer = function() {
    "use strict";
+
+   this.playerColision();
+
    var x = 0;
    var y = 0;
    if (this.keyInput.up) {
@@ -157,21 +206,63 @@ Game.prototype.updatePlayer = function() {
       this.player.v.x *= 0.9;
       this.player.v.y *= 0.9;
    }
+   //TODO uwzględnić czas
    this.player.pos.x += this.player.v.x * 0.1;
    this.player.pos.y += this.player.v.y * 0.1;
 }
 
-Game.prototype.updateGraphic = function() {
+Game.prototype.playerColision = function() {
+   var wall = this.player.wall;
+   if ( wall.distance < this.player.r ) {
+      var offset = this.player.r - wall.distance + 0.01;
+      this.player.pos.x += offset * wall.dx;
+      this.player.pos.y += offset * wall.dy;
+      var dot = this.player.v.x * wall.dx + this.player.v.y * wall.dy;
+      if (dot < 0) {
+         this.player.v.x -= wall.dx * dot * 1.9;
+         this.player.v.y -= wall.dy * dot * 1.9;
+      }
+   }
+}
+
+Game.prototype.checkEndConditions = function() {
+   var x = this.player.pos.x - this.exitPos.x;
+   var y = this.player.pos.y - this.exitPos.y;
+   if (x*x + y*y < 0.04) {
+      this.changeGameState('WIN');
+   }
+}
+
+Game.prototype.changeGameState = function(state) {
+   this.gameState = state;
+   var gameTimeInput = document.getElementById('gameTime');
+   if (this.gameState == 'WIN') {
+      gameTimeInput.style.color = 'green';
+   } else {
+      gameTimeInput.style.color = 'black';
+   }
+}
+
+Game.prototype.updateGraphic = function(id) {
    "use strict";
-	this.graphic.gl.uniform1f(this.mazeShaderSeed, this.mazeSeed );
-	this.graphic.gl.uniform2f(this.mazePlayerPos, this.player.pos.x, this.player.pos.y );
-	this.graphic.gl.uniform2f(this.mazeExitPos, this.exitPos.x, this.exitPos.y );
+   if (id == 1) {
+      this.graphic.gl.uniform1f(this.mazeSeed, this.mazeSeedValue );
+      this.graphic.gl.uniform2f(this.mazePlayerPos, this.player.pos.x, this.player.pos.y );
+      this.graphic.gl.uniform2f(this.mazeExitPos, this.exitPos.x, this.exitPos.y );
+   } else {
+      this.graphic.gl.uniform1f(this.distanceSeed, this.mazeSeedValue );
+	   this.graphic.gl.uniform2f(this.distancePlayerPos, this.player.pos.x, this.player.pos.y );
+   }
 }
 
 Game.prototype.dijkstra = function(maze, start, end) {
    "use strict";
    var size = this.graphic.size;
    var P = new Int16Array(size.x * size.y);
+
+   if (this.debug.noMazeValidation) {
+      return true;
+   }
 
    for (var i = 0; i< size.x * size.y; i++) {
       if (maze[i*4] == 0) {
@@ -208,13 +299,13 @@ Game.prototype.dijkstra = function(maze, start, end) {
    }
    var endValue = P[size.x*end.y + end.x];
 
-   var jsCanvas = document.getElementById('gl_js');
-   var ctx = jsCanvas.getContext('2d');
 
    if (endValue == -1 || endValue == 8*1024) {
       return false;
    } else {
       if (this.debug.showSolution) {
+         var jsCanvas = document.getElementById('gl_js');
+         var ctx = jsCanvas.getContext('2d');
          for(var i = 0; i< this.graphic.size.x * this.graphic.size.y; i++) {
             var x = i%this.graphic.size.x;
             var y = this.graphic.size.y - Math.floor(i/this.graphic.size.x);

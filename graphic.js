@@ -91,15 +91,17 @@ Graphic.prototype.drawFullScreenTriangle = function() {
 }
 
 Graphic.prototype.draw = function() {
+   gl.viewport(0, 0, this.size.x, this.size.y);
    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
    gl.activeTexture(gl.TEXTURE0);
    this.drawFullScreenTriangle(this.fsTriangle);
 }
 
-Graphic.prototype.loadProgramFile = function(vertexFile, fragmentFile, attribs) {
-   var fragment = this.loadShaderFile(fragmentFile);
-   var vertex = this.loadShaderFile(vertexFile);
-   return this.loadProgram(vertex, fragment, attribs);
+Graphic.prototype.loadProgramFile = function(vertexFile, fragmentFile, params) {
+   params = params || {};
+   var fragment = this.loadShaderFile(fragmentFile, params.define);
+   var vertex = this.loadShaderFile(vertexFile, params.define);
+   return this.loadProgram(vertex, fragment, params.attribs);
 }
 
 Graphic.prototype.loadProgram = function(vertex, fragment, attribs){
@@ -135,7 +137,7 @@ Graphic.prototype.loadProgram = function(vertex, fragment, attribs){
    return program;
 }
 
-Graphic.prototype.loadShaderFile = function(file){
+Graphic.prototype.loadShaderFile = function(file, define){
    var request = new XMLHttpRequest();
    request.open('GET', file, false);
    request.overrideMimeType("x-shader/x-fragment");
@@ -152,7 +154,11 @@ Graphic.prototype.loadShaderFile = function(file){
       console.log("unknown shader type: " + file);
    }
 
-   return this.loadShader(request.responseText, type);
+   var defineStr = this.createDefineString(define);
+
+   var shaderStr = defineStr + request.responseText;
+
+   return this.loadShader(shaderStr, type);
 }
 
 Graphic.prototype.loadShader = function(src, type){
@@ -171,6 +177,46 @@ Graphic.prototype.loadShader = function(src, type){
       return null;
    }
    return shader;
+}
+
+Graphic.prototype.createDefineString = function(define) {
+   define = define || {};
+   var str = '';
+   Object.keys(define).forEach( function(key) {
+      str += '#define '+key+' '+define[key]+'\n';
+   });
+   return str;
+}
+
+Graphic.prototype.createFBO = function(params) {
+   var fbo = gl.createFramebuffer();
+   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+   var texture = gl.createTexture();
+   gl.bindTexture(gl.TEXTURE_2D, texture);
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, params.size.x, params.size.y, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+   return {
+      fbo: fbo,
+      texture: texture,
+      size: params.size
+   };
+}
+
+Graphic.prototype.drawToFBO = function(fbo) {
+   gl.viewport(0, 0, fbo.size.x, fbo.size.y);
+   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
+   this.drawFullScreenTriangle(this.fsTriangle);
+}
+
+Graphic.prototype.readFromFBO = function(fbo) {
+   var pixels = new Uint8Array(fbo.size.x * fbo.size.y * 4);
+   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
+   gl.readPixels(0, 0, fbo.size.x, fbo.size.y, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+   return pixels;
 }
 
 top.Graphic = Graphic;

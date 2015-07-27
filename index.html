@@ -35,9 +35,10 @@
    <body onload="game = new Game(); game.init();" onkeydown="game.keyDownEvent(event)" onkeyup="game.keyUpEvent(event)">
       <canvas id="gl" width="800" height="600"> </canvas>
       <canvas id="gl_js" width="800" height="600"> </canvas>
-      <div>
+      <div id="dev">
          <button type="button" onclick="game.genNewMaze=true">New maze</button>
-         <input id="Frame" value=0 type="text" disabled>
+         <input id="gameTime" value="0.0" type="text" disabled>
+         <input id="Frame" value="0" type="text" disabled>
       </div>
    </body>
 </html>

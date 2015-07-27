@@ -182,18 +182,27 @@ float mazeDistance(vec2 pos) {
 void main() {
    float aspect = (3.0/4.0);
    gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0);
-   vec2 pos = ((uv+vec2(1.0, 1.0))*vec2(1.0, aspect))*10.0;
-   if ( distance(pos, playerPos) < 0.2) {
-      gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0);
-      return;
-   }
-   if ( distance(pos, exitPos) < 0.5) {
-      gl_FragColor = vec4( 0.0, 0.0, 1.0, 1.0);
-      return;
-   }
 
-   pos = ComplexMul(pos, normalize(vec2(10000.0,10001.0)));
-   float d = mazeDistance(pos);
-
-   gl_FragColor.xyz = vec3(smoothstep(0.1, 0.15, d));
+   #ifdef GET_DISTANCE
+      vec2 pos = ComplexMul(playerPos, normalize(vec2(10000.0,10001.0)));
+      float d = mazeDistance(pos);
+      float dx = mazeDistance(pos + vec2(0.01, 0.01)) - d;
+      float dy = mazeDistance(pos + vec2(-0.01, 0.01)) - d;
+      vec2 gradient = normalize(vec2(dx,dy));
+      gl_FragColor.xyz = vec3(d-0.1, gradient*0.5 + vec2(0.5));
+   #else
+      vec2 pos = ((uv+vec2(1.0, 1.0))*vec2(1.0, aspect))*10.0;
+      if ( distance(pos, playerPos) < 0.1) {
+         gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0);
+         return;
+      }
+      if ( distance(pos, exitPos) < 0.2) {
+         gl_FragColor = vec4( 0.0, 0.0, 1.0, 1.0);
+         return;
+      }
+      pos = ComplexMul(pos, normalize(vec2(10000.0,10001.0)));
+      float d = mazeDistance(pos);
+      float pd = mazeDistance(ComplexMul(playerPos, normalize(vec2(10000.0,10001.0))));
+      gl_FragColor.xyz = vec3(smoothstep(0.1, 0.15, d));
+   #endif
 }
