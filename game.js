@@ -41,6 +41,9 @@ Game.prototype.init = function() {
       showSolution: false,
       noMazeValidation: false
    };
+   this.config = {
+      tileCount: 2 * 16
+   };
 
    if (!this.debug.showSolution) {
       var jsCanvas = document.getElementById('gl_js');
@@ -52,7 +55,7 @@ Game.prototype.init = function() {
          x: 0.0,
          y: 0.0
       },
-      r: 0.1,
+      r: 0.2,
       v: {
          x: 0.0,
          y: 0.0
@@ -228,7 +231,7 @@ Game.prototype.playerColision = function() {
 Game.prototype.checkEndConditions = function() {
    var x = this.player.pos.x - this.exitPos.x;
    var y = this.player.pos.y - this.exitPos.y;
-   if (x*x + y*y < 0.04) {
+   if (x*x + y*y < 0.16) {
       this.changeGameState('WIN');
    }
 }
@@ -362,14 +365,16 @@ Game.prototype.addStartAndExit = function(maze) {
       } while (Math.sqrt(len.x*len.x + len.y*len.y) < 200)
    } while (!this.dijkstra(maze, start, end))
 
+   var that = this;
+
    function convertPos(pos, imageSize){
       var x = pos.x;
       var y = pos.y;
       x /= imageSize.x;
       y /= imageSize.y;
       y *= (imageSize.y/imageSize.x);
-      x *= 2*10.0;
-      y *= 2*10.0;
+      x *= that.config.tileCount;
+      y *= that.config.tileCount;
       return {x: x, y: y};
    }
    console.log(this);
