@@ -20,6 +20,7 @@ varying highp vec2 uv;
 uniform float seed;
 uniform vec2 playerPos;
 uniform vec2 exitPos;
+uniform sampler2D maze;
 
 float BBS4(float x) {
    x = mod((x * x), 16807.0);
@@ -43,19 +44,11 @@ float mazeDistance(vec2 pos) {
    */
    bool a,b,c,d;
 
-   if (mod(tile.x, 2.0) < 1.0 ^^ mod(tile.y, 2.0) < 1.0) {
-      //tileType: | true; – false
-      bool tileType = BBS4(tile.x*128.0 + tile.y + seed) > 0.0 ? true : false;
-      a = true ^^ tileType;
-      b = false ^^ tileType;
-      c = true ^^ tileType;
-      d = false ^^ tileType;
-   } else {
-      a = BBS4(tile.x*128.0 + tile.y + 1.0 + seed) > 0.0 ? false : true;
-      c = BBS4(tile.x*128.0 + tile.y - 1.0 + seed) > 0.0 ? false : true;
-      b = BBS4((tile.x+1.0)*128.0 + tile.y + seed) > 0.0 ? true : false;
-      d = BBS4((tile.x-1.0)*128.0 + tile.y + seed) > 0.0 ? true : false;
-   }
+   bvec4 abcd = bvec4(texture2D(maze,tile/32.0));
+   a = abcd.x;
+   b = abcd.y;
+   c = abcd.z;
+   d = abcd.w;
 
    float dist;
    vec2 p = fract(pos);
@@ -110,5 +103,4 @@ void main() {
       }
       gl_FragColor.xyz = vec3(smoothstep(0.1, 0.15, mazeDistance(pos)));
    #endif
-   //gl_FragColor.x = (mod(tile.x, 2.0) < 1.0 ^^ mod(tile.y, 2.0) < 1.0)  ? 1.0 : 0.0;
 }

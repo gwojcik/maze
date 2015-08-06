@@ -93,7 +93,6 @@ Graphic.prototype.drawFullScreenTriangle = function() {
 Graphic.prototype.draw = function() {
    gl.viewport(0, 0, this.size.x, this.size.y);
    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-   gl.activeTexture(gl.TEXTURE0);
    this.drawFullScreenTriangle(this.fsTriangle);
 }
 
@@ -217,6 +216,22 @@ Graphic.prototype.readFromFBO = function(fbo) {
    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
    gl.readPixels(0, 0, fbo.size.x, fbo.size.y, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
    return pixels;
+}
+
+Graphic.prototype.createTexture = function(params) {
+   var texture = gl.createTexture();
+   gl.bindTexture(gl.TEXTURE_2D, texture);
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, params.size, params.size, 0, gl.RGBA, gl.UNSIGNED_BYTE, params.data);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+   return texture;
+}
+
+Graphic.prototype.updateTexture = function(params) {
+   gl.bindTexture(gl.TEXTURE_2D, params.texture);
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, params.size, params.size, 0, gl.RGBA, gl.UNSIGNED_BYTE, params.data);
 }
 
 top.Graphic = Graphic;

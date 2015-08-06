@@ -32,6 +32,8 @@ Game.prototype.init = function() {
    this.graphic = new Graphic();
    this.graphic.init({canvas: 'gl'});
 
+   this.gen = new Gen();
+
    var time = new Date();
    this.startTime = time.getTime();
    this.lastFrameTime = time.getTime();
@@ -77,6 +79,13 @@ Game.prototype.init = function() {
    this.mazeSeed = this.graphic.gl.getUniformLocation(this.mazeShader, 'seed');
    this.mazePlayerPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'playerPos');
    this.mazeExitPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'exitPos');
+   this.mazeTextureUniform = this.graphic.gl.getUniformLocation(this.mazeShader, 'maze');
+
+   this.mazeTexture = this.graphic.createTexture({
+      size: 32,
+      data: null
+   });
+   this.graphic.gl.uniform1i(this.mazeTextureUniform, 0 );
 
    this.distanceShader = this.graphic.loadProgramFile("./simple.vert","./maze.frag", {define: {GET_DISTANCE: 1}});
    this.distanceFBO = this.graphic.createFBO({size: {x: 1, y: 1} });
@@ -134,6 +143,14 @@ Game.prototype.draw = function() {
       this.player.pos = {x: 0, y:0};
       this.exitPos = {x: 0, y:0};
       this.updateGraphic(1);
+      this.graphic.updateTexture({
+         texture: this.mazeTexture,
+         size: 32,
+         data: this.gen.maze({
+            size: 32,
+            seed: this.mazeSeedValue
+         })
+      });
       this.graphic.draw();
       var P = new Uint8Array(4 * this.graphic.size.x * this.graphic.size.y);
       this.graphic.gl.readPixels(0, 0, this.graphic.size.x, this.graphic.size.y, this.graphic.gl.RGBA, this.graphic.gl.UNSIGNED_BYTE, P);
@@ -145,9 +162,9 @@ Game.prototype.draw = function() {
       this.updateGraphic(2);
       this.graphic.drawToFBO(this.distanceFBO, this.distanceShader);
       var wall = this.graphic.readFromFBO(this.distanceFBO);
-      this.player.wall.distance = wall[0]/256;
-      this.player.wall.dx = (wall[1]/256 - 0.5) * 2.0 ;
-      this.player.wall.dy = (wall[2]/256 - 0.5) * 2.0 ;
+      this.player.wall.distance = wall[0]/255;
+      this.player.wall.dx = (wall[1]/255 - 0.5) * 2.0 ;
+      this.player.wall.dy = (wall[2]/255 - 0.5) * 2.0 ;
       this.playerColision();
 
       this.graphic.gl.useProgram(this.mazeShader);
@@ -252,9 +269,13 @@ Game.prototype.updateGraphic = function(id) {
       this.graphic.gl.uniform1f(this.mazeSeed, this.mazeSeedValue );
       this.graphic.gl.uniform2f(this.mazePlayerPos, this.player.pos.x, this.player.pos.y );
       this.graphic.gl.uniform2f(this.mazeExitPos, this.exitPos.x, this.exitPos.y );
+      this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
+      this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
    } else {
       this.graphic.gl.uniform1f(this.distanceSeed, this.mazeSeedValue );
 	   this.graphic.gl.uniform2f(this.distancePlayerPos, this.player.pos.x, this.player.pos.y );
+      this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
+      this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
    }
 }
 
