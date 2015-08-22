@@ -43,11 +43,11 @@ Gen.prototype.maze = function(params) {
    var size = params.size * params.size * 4;
    var data = new Uint8Array(size);
    var i = 0;
-   /*  0
+   /*  2
       ┏━┓
      3┃ ┃1
       ┗━┛
-       2
+       0
    */
    for (var y = 0; y < params.size; y++) {
       for (var x = 0; x < params.size; x++) {
@@ -71,5 +71,108 @@ Gen.prototype.maze = function(params) {
          i += 4;
       }
    }
+   return this.mazeStructure(data, params);
    return data;
+}
+
+Gen.prototype.mazeStructure = function(data, params) {
+   var size = params.size * params.size * 4;
+   var newData = new Uint8Array(size);
+   function calcPos(x,y) {
+      return (
+         ((params.size + y) % params.size) * params.size +
+         (params.size + x) % params.size
+      ) * 4;
+   }
+
+   // X
+   for (var y = 0; y < params.size; y++) {
+      var x = 0;
+      var left = 0;
+      var right = 0;
+      while (x < params.size) {
+         var pos = 0;
+         if (right > 0) {
+            left  += 1;
+            right -= 1;
+         } else {
+            var done = false;
+            left = 0;
+            right = 0;
+            //left
+            var i = 0;
+            while (!done) {
+               pos = calcPos(x - i, y);
+               if( data[pos + 3] ) {
+                  left ++;
+               } else {
+                  done = true;
+               }
+               i++;
+            }
+            //right
+            i = 0;
+            done = false;
+            while (!done) {
+               pos = calcPos(x + i, y);
+               if( data[pos + 1] ) {
+                  right ++;
+               } else {
+                  done = true;
+               }
+               i++;
+            }
+         }
+         pos = calcPos(x, y);
+         newData[pos + 1] = right;
+         newData[pos + 3] = left;
+         x ++;
+      }
+   }
+
+   // Y
+   for (var x = 0; x < params.size; x++) {
+      var y = 0;
+      var down = 0;
+      var up = 0;
+      while (y < params.size) {
+         var pos = 0;
+         if (down > 0) {
+            up  += 1;
+            down -= 1;
+         } else {
+            var done = false;
+            down = 0;
+            up = 0;
+            //up
+            var i = 0;
+            while (!done) {
+               pos = calcPos(x, y - i);
+               if( data[pos + 2] ) {
+                  up ++;
+               } else {
+                  done = true;
+               }
+               i++;
+            }
+            //down
+            i = 0;
+            done = false;
+            while (!done) {
+               pos = calcPos(x, y + i);
+               if( data[pos + 0] ) {
+                  down ++;
+               } else {
+                  done = true;
+               }
+               i++;
+            }
+         }
+         pos = calcPos(x, y);
+         newData[pos + 0] = down;
+         newData[pos + 2] = up;
+         y ++;
+      }
+   }
+   return newData;
 }

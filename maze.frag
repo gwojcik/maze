@@ -21,18 +21,10 @@ uniform float seed;
 uniform vec2 playerPos;
 uniform vec2 exitPos;
 uniform sampler2D maze;
+uniform float ambient;
 
-float BBS4(float x) {
-   x = mod((x * x), 16807.0);
-   x = mod((x * x), 16807.0);
-   x = mod((x * x), 16807.0);
-   return mod((x * x), 16807.0) * (2.0/16807.0) - 1.0;
-}
-
-vec2 ComplexMul(in vec2 A, in vec2 B)
-{
-	return vec2(A.x*B.x - A.y*B.y,		A.y*B.x + A.x*B.y);
-}
+#define WALL_R 0.1
+#define WALL_RO 0.11
 
 float mazeDistance(vec2 pos) {
    vec2 tile = ceil(pos);
@@ -44,11 +36,11 @@ float mazeDistance(vec2 pos) {
    */
    bool a,b,c,d;
 
-   bvec4 abcd = bvec4(texture2D(maze,tile/32.0));
-   a = abcd.x;
-   b = abcd.y;
-   c = abcd.z;
-   d = abcd.w;
+   bvec4 tileData = bvec4(texture2D(maze,tile/32.0));
+   a = tileData.x;
+   b = tileData.y;
+   c = tileData.z;
+   d = tileData.w;
 
    float dist;
    vec2 p = fract(pos);
@@ -62,21 +54,86 @@ float mazeDistance(vec2 pos) {
    dist = min(dist,dot(x,x));
    dist = sqrt(dist);
 
-   if (a) {
+   if (!a) {
       dist = min(dist, 1.0 - p.y);
    }
-   if (c) {
+   if (!c) {
       dist = min(dist, p.y);
    }
-   if (b) {
+   if (!b) {
       dist = min(dist, 1.0 - p.x);
    }
-   if (d) {
+   if (!d) {
       dist = min(dist, p.x);
    }
 
-
    return dist;
+}
+
+float shadow(vec2 p, vec2 l) {
+   vec2 tileP = ceil(p);
+   vec2 tileL = ceil(l);
+   vec2 tileV = normalize(tileP - tileL);
+
+   bool light = false;
+
+   vec2 newL = l;
+   vec4 tileData = texture2D(maze,tileL/32.0) * 255.0;
+   for(int i = 0; i < 3; i++) {
+      if (!light) {
+         vec2 v = normalize(p - l);
+         float dist = distance(p, newL);
+
+         float dd1;
+         if (v.x > 0.0 ) {
+            dd1 = tileData.y + tileL.x - newL.x - WALL_RO;
+         } else {
+            dd1 = -(tileData.w + newL.x - tileL.x + 1.0) + WALL_RO;
+         }
+         dd1 /= v.x;
+         float dd1m;
+         if (v.y > 0.0 ) {
+            dd1m = -(newL.y - tileL.y) - WALL_RO;
+         } else {
+            dd1m = - 1.0 - (newL.y - tileL.y) + WALL_RO;
+         }
+         dd1m /= v.y;
+         dd1 = min(dd1, dd1m);
+
+         float dd2;
+         if (v.y > 0.0 ) {
+            dd2 = tileData.x + tileL.y - newL.y - WALL_RO;
+         } else {
+            dd2 = -(tileData.z + newL.y - tileL.y + 1.0) + WALL_RO;
+         }
+         dd2 /= v.y;
+         float dd2m;
+         if (v.x > 0.0 ) {
+            dd2m = -(newL.x - tileL.x) - WALL_RO;
+         } else {
+            dd2m = - 1.0 - (newL.x - tileL.x) + WALL_RO;
+         }
+         dd2m /= v.x;
+         dd2 = min(dd2, dd2m);
+
+         float dd = max(dd1,dd2);
+
+         if ( dd >= dist) {
+            light = true;
+            break;
+         }
+         newL += v * dd;
+         tileL = ceil(newL);
+         tileData = texture2D(maze,tileL/32.0) * 255.0;
+      }
+   }
+
+   if (light) {
+      float d = distance(p, l);
+      return 2.0/(d*d);
+   }
+   
+   return 0.0;
 }
 
 void main() {
@@ -91,7 +148,7 @@ void main() {
       float dx = mazeDistance(pos + vec2(0.01, 0.00)) - d;
       float dy = mazeDistance(pos + vec2(0.00, 0.01)) - d;
       vec2 gradient = normalize(vec2(dx,dy));
-      gl_FragColor.xyz = vec3(d-0.1, gradient*0.5 + vec2(0.5));
+      gl_FragColor.xyz = vec3(d - WALL_R, gradient*0.5 + vec2(0.5));
    #else
       if ( distance(pos, playerPos) < 0.2) {
          gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0);
@@ -101,6 +158,7 @@ void main() {
          gl_FragColor = vec4( 0.0, 0.0, 1.0, 1.0);
          return;
       }
-      gl_FragColor.xyz = vec3(smoothstep(0.1, 0.15, mazeDistance(pos)));
+      float shadow = shadow(pos, playerPos) + ambient;
+      gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadow;
    #endif
 }

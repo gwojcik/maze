@@ -44,7 +44,8 @@ Game.prototype.init = function() {
       noMazeValidation: false
    };
    this.config = {
-      tileCount: 2 * 16
+      tileCount: 2 * 16,
+      ambientLight: 0.0,
    };
 
    if (!this.debug.showSolution) {
@@ -80,6 +81,7 @@ Game.prototype.init = function() {
    this.mazePlayerPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'playerPos');
    this.mazeExitPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'exitPos');
    this.mazeTextureUniform = this.graphic.gl.getUniformLocation(this.mazeShader, 'maze');
+   this.mazeAmbient = this.graphic.gl.getUniformLocation(this.mazeShader, 'ambient');
 
    this.mazeTexture = this.graphic.createTexture({
       size: 32,
@@ -143,6 +145,7 @@ Game.prototype.draw = function() {
       this.player.pos = {x: 0, y:0};
       this.exitPos = {x: 0, y:0};
       this.updateGraphic(1);
+      this.graphic.gl.uniform1f(this.mazeAmbient, 1.0 );
       this.graphic.updateTexture({
          texture: this.mazeTexture,
          size: 32,
@@ -155,6 +158,7 @@ Game.prototype.draw = function() {
       var P = new Uint8Array(4 * this.graphic.size.x * this.graphic.size.y);
       this.graphic.gl.readPixels(0, 0, this.graphic.size.x, this.graphic.size.y, this.graphic.gl.RGBA, this.graphic.gl.UNSIGNED_BYTE, P);
       this.addStartAndExit(P);
+      this.graphic.gl.uniform1f(this.mazeAmbient, this.config.ambientLight );
       this.genNewMaze = false;
    } else {
       this.graphic.gl.useProgram(this.distanceShader);
