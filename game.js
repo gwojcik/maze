@@ -36,7 +36,8 @@ Game.prototype.init = function() {
 
    var time = new Date();
    this.startTime = time.getTime();
-   this.lastFrameTime = time.getTime();
+   this.frameTime = time.getTime();
+   this.frameDelta = 0.0;
    this.changeGameState('NEW');
 
    this.debug = {
@@ -44,8 +45,9 @@ Game.prototype.init = function() {
       noMazeValidation: false
    };
    this.config = {
-      tileCount: 2 * 16,
+      tileCount:    2 * 16,
       ambientLight: 0.0,
+      logicFPS:    60
    };
 
    if (!this.debug.showSolution) {
@@ -163,13 +165,6 @@ Game.prototype.draw = function() {
    } else {
       this.graphic.gl.useProgram(this.distanceShader);
       this.updatePlayer();
-      this.updateGraphic(2);
-      this.graphic.drawToFBO(this.distanceFBO, this.distanceShader);
-      var wall = this.graphic.readFromFBO(this.distanceFBO);
-      this.player.wall.distance = wall[0]/255;
-      this.player.wall.dx = (wall[1]/255 - 0.5) * 2.0 ;
-      this.player.wall.dy = (wall[2]/255 - 0.5) * 2.0 ;
-      this.playerColision();
 
       this.graphic.gl.useProgram(this.mazeShader);
       this.updateGraphic(1);
@@ -188,18 +183,25 @@ Game.prototype.updateGUI = function() {
    if (this.gameState == 'NEW') {
       gameTimeInput.value = (time - this.startTime)/1000;
    }
-
-   var thisFrameTime = time;
-   var frameTime = document.getElementById('Frame');
-   frameTime.value = thisFrameTime - this.lastFrameTime;
-   this.lastFrameTime = thisFrameTime;
-
+   document.getElementById('Frame').value = this.frameDelta;
 }
 
 Game.prototype.updatePlayer = function() {
    "use strict";
 
-   this.playerColision();
+   var time = (new Date()).getTime();
+
+   var thisFrameTime = time;
+   var lastFrameTime = this.frameTime;
+   var delta = thisFrameTime - lastFrameTime;
+   this.frameDelta = delta;
+   var steps = this.config.logicFPS;
+   var N = Math.floor((delta/1000)*steps);
+   this.frameTime += N*(1000/steps);
+
+   var stepRcp = 1/steps;
+   var a = 2;
+   var maxV = 5;
 
    var x = 0;
    var y = 0;
@@ -215,34 +217,42 @@ Game.prototype.updatePlayer = function() {
    if (this.keyInput.left) {
       x -= 1;
    }
-
    var len = Math.sqrt(x*x + y*y);
 
-   if (len > 0) {
-      this.player.v.x += (x/len) * 0.01;
-      this.player.v.y += (y/len) * 0.01;
-      var vLen = Math.sqrt(this.player.v.x * this.player.v.x + this.player.v.y * this.player.v.y);
-      if ( vLen > 1) {
-         this.player.v.x /= vLen;
-         this.player.v.x /= vLen;
+   for(var i = 0; i < N; i++) {
+      this.playerColision();
+
+      if (len > 0) {
+         this.player.v.x += a*(x/len)*stepRcp;
+         this.player.v.y += a*(y/len)*stepRcp;
+         var vLen = Math.sqrt(this.player.v.x * this.player.v.x + this.player.v.y * this.player.v.y);
+         if ( vLen > maxV) {
+            this.player.v.x /= vLen/maxV;
+            this.player.v.y /= vLen/maxV;
+         }
+      } else {
+         this.player.v.x -= this.player.v.x * 0.9 * stepRcp;
+         this.player.v.y -= this.player.v.y * 0.9 * stepRcp;
       }
-   } else {
-      this.player.v.x *= 0.9;
-      this.player.v.y *= 0.9;
+
+      this.player.pos.x += this.player.v.x*stepRcp;
+      this.player.pos.y += this.player.v.y*stepRcp;
    }
-   //TODO uwzględnić czas
-   this.player.pos.x += this.player.v.x * 0.1;
-   this.player.pos.y += this.player.v.y * 0.1;
 }
 
 Game.prototype.playerColision = function() {
-   var wall = this.player.wall;
+   this.updateGraphic(2);
+   this.graphic.drawToFBO(this.distanceFBO, this.distanceShader);
+   var wallRaw = this.graphic.readFromFBO(this.distanceFBO);
+   var wall = {};
+   wall.distance = wallRaw[0]/255;
+   wall.dx = (wallRaw[1]/255 - 0.5) * 2.0 ;
+   wall.dy = (wallRaw[2]/255 - 0.5) * 2.0 ;
    if ( wall.distance < this.player.r ) {
       var offset = this.player.r - wall.distance + 0.01;
       this.player.pos.x += offset * wall.dx;
       this.player.pos.y += offset * wall.dy;
-      var dot = this.player.v.x * wall.dx + this.player.v.y * wall.dy;
-      if (dot < 0) {
+      var dot = this.player.v.x * wall.dx + this.player.v.y * wall.dy; if (dot < 0) {
          this.player.v.x -= wall.dx * dot * 1.9;
          this.player.v.y -= wall.dy * dot * 1.9;
       }
