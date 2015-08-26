@@ -17,7 +17,6 @@
 
 precision highp float;
 varying highp vec2 uv;
-uniform float seed;
 uniform vec2 playerPos;
 uniform vec2 exitPos;
 uniform sampler2D maze;
@@ -36,7 +35,7 @@ float mazeDistance(vec2 pos) {
    */
    bool a,b,c,d;
 
-   bvec4 tileData = bvec4(texture2D(maze,tile/32.0));
+   bvec4 tileData = bvec4(texture2D(maze,tile/MAZE_SIZE));
    a = tileData.x;
    b = tileData.y;
    c = tileData.z;
@@ -78,7 +77,7 @@ float shadow(vec2 p, vec2 l) {
    bool light = false;
 
    vec2 newL = l;
-   vec4 tileData = texture2D(maze,tileL/32.0) * 255.0;
+   vec4 tileData = texture2D(maze,tileL/MAZE_SIZE) * 255.0;
    for(int i = 0; i < 3; i++) {
       if (!light) {
          vec2 v = normalize(p - l);
@@ -124,7 +123,7 @@ float shadow(vec2 p, vec2 l) {
          }
          newL += v * dd;
          tileL = ceil(newL);
-         tileData = texture2D(maze,tileL/32.0) * 255.0;
+         tileData = texture2D(maze,tileL/MAZE_SIZE) * 255.0;
       }
    }
 
@@ -160,5 +159,7 @@ void main() {
       }
       float shadow = shadow(pos, playerPos) + ambient;
       gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadow;
+      //vec2 tile = ceil((pos+vec2(1.0, 1.0))/MAZE_SIZE);
+      //gl_FragColor.r *= (mod(tile.x, 2.0) < 1.0 ^^ mod(tile.y, 2.0) < 1.0)  ? 1.0 : 0.0;
    #endif
 }

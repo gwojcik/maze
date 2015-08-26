@@ -38,8 +38,16 @@ Gen.prototype.BBS8 = function(x) {
    return x * x % 16807 * (2.0/16807) - 1.0;
 }
 
+Gen.prototype.getCalcPosFun = function(size, N) {
+   return function(x,y) {
+      return (
+         ((size + y) % size) * size +
+         (size + x) % size
+      ) * N;
+   };
+}
+
 Gen.prototype.maze = function(params) {
-   console.log(params);
    var size = params.size * params.size * 4;
    var data = new Uint8Array(size);
    var i = 0;
@@ -71,19 +79,85 @@ Gen.prototype.maze = function(params) {
          i += 4;
       }
    }
-   return this.mazeStructure(data, params);
-   return data;
+   var structureData = this.mazeStructure(data, params);
+   return structureData;
+}
+
+Gen.prototype.connectedMazeRegions = function(data, params) {
+   var dataSize = params.size * params.size;
+   var newData = new Uint32Array(dataSize);
+   var calcPos4 = this.getCalcPosFun(params.size, 4);
+   var calcPos1 = this.getCalcPosFun(params.size, 1);
+
+   var linked = [];
+   var label = 0;
+   linked[1] = new Set();
+   linked[1].add(label);
+
+   var pos;
+   for (var y = 0; y < params.size; y++) {
+      for (var x = 0; x < params.size; x++) {
+         var neighbors = [];
+         pos = calcPos4(x,y);
+         if (data[pos + 2] > 0) {
+            var tmp = newData[calcPos1(x, y - 1)];
+            if (tmp > 0) {
+               neighbors.push(tmp);
+            }
+         }
+         if (data[pos + 3] > 0) {
+            var tmp = newData[calcPos1(x - 1, y)];
+            if (tmp > 0) {
+               neighbors.push(tmp);
+            }
+         }
+         if (neighbors.length == 0) {
+            pos = calcPos1(x,y);
+            label ++;
+            newData[pos] = label;
+            linked[label] = new Set();
+            linked[label].add(label);
+         } else {
+            var min = Infinity;
+            neighbors.forEach(function(i) {
+               min = (i < min) ? i : min;
+            });
+            neighbors.forEach(function(i) {
+               linked[i].add(min);
+            })
+            pos = calcPos1(x,y);
+            newData[pos] = min;
+         }
+      }
+   }
+
+   var processedLinks = [];
+   var linkedObj = {};
+   linked.forEach(function(i, key) {
+      var min = Infinity;
+      linkedObj[key] = [];
+      i.forEach(function(i) {
+         linkedObj[key].push(i);
+         min = (i < min) ? i : min;
+      });
+      processedLinks[key] = min;
+   });
+
+   for (var y = 0; y < params.size; y++) {
+      for (var x = 0; x < params.size; x++) {
+         pos = calcPos1(x,y);
+         var tmp = newData[pos];
+         newData[pos] = processedLinks[tmp];
+      }
+   }
+
+   return newData;
 }
 
 Gen.prototype.mazeStructure = function(data, params) {
    var size = params.size * params.size * 4;
    var newData = new Uint8Array(size);
-   function calcPos(x,y) {
-      return (
-         ((params.size + y) % params.size) * params.size +
-         (params.size + x) % params.size
-      ) * 4;
-   }
+   var calcPos = this.getCalcPosFun(params.size, 4);
 
    // X
    for (var y = 0; y < params.size; y++) {
@@ -103,7 +177,7 @@ Gen.prototype.mazeStructure = function(data, params) {
             var i = 0;
             while (!done) {
                pos = calcPos(x - i, y);
-               if( data[pos + 3] ) {
+               if( data[pos + 3] && left < 255 ) {
                   left ++;
                } else {
                   done = true;
@@ -115,7 +189,7 @@ Gen.prototype.mazeStructure = function(data, params) {
             done = false;
             while (!done) {
                pos = calcPos(x + i, y);
-               if( data[pos + 1] ) {
+               if( data[pos + 1] && right < 255) {
                   right ++;
                } else {
                   done = true;
@@ -148,7 +222,7 @@ Gen.prototype.mazeStructure = function(data, params) {
             var i = 0;
             while (!done) {
                pos = calcPos(x, y - i);
-               if( data[pos + 2] ) {
+               if( data[pos + 2] && up < 255) {
                   up ++;
                } else {
                   done = true;
@@ -160,7 +234,7 @@ Gen.prototype.mazeStructure = function(data, params) {
             done = false;
             while (!done) {
                pos = calcPos(x, y + i);
-               if( data[pos + 0] ) {
+               if( data[pos + 0] && down < 255 ) {
                   down ++;
                } else {
                   done = true;
