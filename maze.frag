@@ -19,6 +19,7 @@ precision highp float;
 varying highp vec2 uv;
 uniform vec2 playerPos;
 uniform vec2 exitPos;
+uniform vec2 cameraPos;
 uniform sampler2D maze;
 uniform float ambient;
 
@@ -149,6 +150,8 @@ void main() {
       vec2 gradient = normalize(vec2(dx,dy));
       gl_FragColor.xyz = vec3(d - WALL_R, gradient*0.5 + vec2(0.5));
    #else
+      pos += cameraPos;
+      pos -= vec2(16.0, 16.0*aspect);
       if ( distance(pos, playerPos) < 0.2) {
          gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0);
          return;

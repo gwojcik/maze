@@ -69,6 +69,12 @@ Game.prototype.init = function() {
       x: 0.0,
       y: 0.0
    }
+   this.camera = {
+      pos: {
+         x: 0.0,
+         y: 0.0
+      }
+   }
    this.mazeSeedValue = 0;
    this.keyInput = {};
    
@@ -81,6 +87,7 @@ Game.prototype.init = function() {
    this.mazeExitPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'exitPos');
    this.mazeTextureUniform = this.graphic.gl.getUniformLocation(this.mazeShader, 'maze');
    this.mazeAmbient = this.graphic.gl.getUniformLocation(this.mazeShader, 'ambient');
+   this.mazeCameraPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'cameraPos');
 
    this.mazeTexture = this.graphic.createTexture({
       size: this.config.mazeSize,
@@ -199,8 +206,15 @@ Game.prototype.updatePlayer = function() {
    }
    var len = Math.sqrt(x*x + y*y);
 
+   var cameraOffset = {x: 0.0, y: 0.0};
    for(var i = 0; i < N; i++) {
       this.playerColision();
+
+      cameraOffset.x = this.player.pos.x - this.camera.pos.x;
+      cameraOffset.y = this.player.pos.y - this.camera.pos.y;
+
+      this.camera.pos.x += cameraOffset.x * stepRcp * 0.5;
+      this.camera.pos.y += cameraOffset.y * stepRcp * 0.5;
 
       if (len > 0) {
          this.player.v.x += a*(x/len)*stepRcp;
@@ -261,6 +275,7 @@ Game.prototype.updateGraphic = function(id) {
    "use strict";
    if (id == 1) {
       this.graphic.gl.uniform2f(this.mazePlayerPos, this.player.pos.x, this.player.pos.y );
+      this.graphic.gl.uniform2f(this.mazeCameraPos, this.camera.pos.x, this.camera.pos.y );
       this.graphic.gl.uniform2f(this.mazeExitPos, this.exitPos.x, this.exitPos.y );
       this.graphic.gl.uniform1f(this.mazeAmbient, this.config.ambientLight );
       this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
@@ -315,6 +330,7 @@ Game.prototype.createNewMaze = function() {
    this.changeGameState('NEW');
    this.player.pos = {x: 0, y:0};
    this.exitPos = {x: 0, y:0};
+   this.camera.pos = { x: 0, y: 0 };
 
    var mazeData = this.gen.maze({
       size: this.config.mazeSize,
@@ -333,5 +349,9 @@ Game.prototype.createNewMaze = function() {
       data: regions,
       size: this.config.mazeSize
    });
+   this.camera.pos = {
+      x: this.player.pos.x,
+      y: this.player.pos.y
+   };
    this.genNewMaze = ! success;
 }
