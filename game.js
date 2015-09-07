@@ -46,7 +46,8 @@ Game.prototype.init = function() {
       tileCount:    2 * 16,
       ambientLight: 0.0,
       logicFPS:     60,
-      mazeSize:     16
+      mazeSize:     16,
+      maxLightCount: 4
    };
 
    this.player = {
@@ -68,13 +69,16 @@ Game.prototype.init = function() {
    this.exitPos = {
       x: 0.0,
       y: 0.0
-   }
+   };
    this.camera = {
       pos: {
          x: 0.0,
          y: 0.0
       }
-   }
+   };
+   this.maze = {
+      lights: []
+   };
    this.mazeSeedValue = 0;
    this.keyInput = {};
    
@@ -88,12 +92,15 @@ Game.prototype.init = function() {
    this.mazeTextureUniform = this.graphic.gl.getUniformLocation(this.mazeShader, 'maze');
    this.mazeAmbient = this.graphic.gl.getUniformLocation(this.mazeShader, 'ambient');
    this.mazeCameraPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'cameraPos');
+   this.mazeLightCount = this.graphic.gl.getUniformLocation(this.mazeShader, 'lightCount');
+   this.mazeLightPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'lightPos');
 
    this.mazeTexture = this.graphic.createTexture({
       size: this.config.mazeSize,
       data: null
    });
    this.graphic.gl.uniform1i(this.mazeTextureUniform, 0 );
+   this.graphic.gl.uniform1i(this.mazeLightCount, 1 );
 
    this.distanceShader = this.graphic.loadProgramFile("./simple.vert","./maze.frag", {
       define: {
@@ -109,7 +116,7 @@ Game.prototype.init = function() {
    this.genNewMaze = true;
 
    this.draw();
-}
+};
 
 Game.prototype.keyDownEvent = function(event) {
    var key = event.keyCode;
@@ -121,8 +128,10 @@ Game.prototype.keyDownEvent = function(event) {
       this.keyInput.right = true;
    } else if (key == 0x25 || key == 0x41) { //ArrowRight || A
       this.keyInput.left = true;
+   } else if (key == 0x20) { //ArrowRight || A
+      this.keyInput.newLight = false;
    }
-}
+};
 
 Game.prototype.keyUpEvent = function(event) {
    var key = event.keyCode;
@@ -134,8 +143,10 @@ Game.prototype.keyUpEvent = function(event) {
       this.keyInput.right = false;
    } else if (key == 0x25 || key == 0x41) { //ArrowRight || A
       this.keyInput.left = false;
+   } else if (key == 0x20) { //Space
+      this.keyInput.newLight = true;
    }
-}
+};
 
 Game.prototype.draw = function() {
    "use strict";
@@ -152,6 +163,10 @@ Game.prototype.draw = function() {
    } else {
       this.graphic.gl.useProgram(this.distanceShader);
       this.updatePlayer();
+      if (this.keyInput.newLight) {
+         this.keyInput.newLight = false;
+         this.addLight(this.player.pos.x, this.player.pos.y);
+      }
 
       this.graphic.gl.useProgram(this.mazeShader);
       this.updateGraphic(1);
@@ -161,7 +176,7 @@ Game.prototype.draw = function() {
    }
 
    window.requestAnimationFrame(callback,this.canvas);
-}
+};
 
 Game.prototype.updateGUI = function() {
    var time = (new Date()).getTime();
@@ -171,7 +186,7 @@ Game.prototype.updateGUI = function() {
       gameTimeInput.value = (time - this.startTime)/1000;
    }
    document.getElementById('Frame').value = this.frameDelta;
-}
+};
 
 Game.prototype.updatePlayer = function() {
    "use strict";
@@ -232,7 +247,7 @@ Game.prototype.updatePlayer = function() {
       this.player.pos.x += this.player.v.x*stepRcp;
       this.player.pos.y += this.player.v.y*stepRcp;
    }
-}
+};
 
 Game.prototype.playerColision = function() {
    this.updateGraphic(2);
@@ -251,7 +266,7 @@ Game.prototype.playerColision = function() {
          this.player.v.y -= wall.dy * dot * 1.9;
       }
    }
-}
+};
 
 Game.prototype.checkEndConditions = function() {
    var x = this.player.pos.x - this.exitPos.x;
@@ -259,7 +274,7 @@ Game.prototype.checkEndConditions = function() {
    if (x*x + y*y < 0.16) {
       this.changeGameState('WIN');
    }
-}
+};
 
 Game.prototype.changeGameState = function(state) {
    this.gameState = state;
@@ -269,7 +284,7 @@ Game.prototype.changeGameState = function(state) {
    } else {
       gameTimeInput.style.color = 'black';
    }
-}
+};
 
 Game.prototype.updateGraphic = function(id) {
    "use strict";
@@ -280,12 +295,17 @@ Game.prototype.updateGraphic = function(id) {
       this.graphic.gl.uniform1f(this.mazeAmbient, this.config.ambientLight );
       this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
       this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
+      var lights = [this.player.pos.x, this.player.pos.y];
+      lights.push.apply(lights, this.maze.lights);
+      console.log(lights);
+      this.graphic.gl.uniform2fv(this.mazeLightPos, lights);
+      this.graphic.gl.uniform1i(this.mazeLightCount, lights.length/2);
    } else {
 	   this.graphic.gl.uniform2f(this.distancePlayerPos, this.player.pos.x, this.player.pos.y );
       this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
       this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
    }
-}
+};
 
 Game.prototype.addStartAndExit = function(hP) {
    var size = hP.size;
@@ -294,7 +314,7 @@ Game.prototype.addStartAndExit = function(hP) {
    var len = {};
    function isSameRegion(s, e) {
       return hP.data[s.x + s.y * hP.size] == hP.data[e.x + e.y * hP.size];
-   };
+   }
    var i = 0;
    do {
       start.x = Math.floor(Math.random()*size);
@@ -316,12 +336,12 @@ Game.prototype.addStartAndExit = function(hP) {
          x: p.x - 0.5,
          y: p.y - 0.5
       };
-   };
+   }
 
    this.player.pos = convertPos(start);
    this.exitPos = convertPos(end);
    return true;
-}
+};
 
 Game.prototype.createNewMaze = function() {
    var time = (new Date()).getTime();
@@ -354,4 +374,12 @@ Game.prototype.createNewMaze = function() {
       y: this.player.pos.y
    };
    this.genNewMaze = ! success;
-}
+};
+
+Game.prototype.addLight = function(x, y) {
+   if ( this.maze.lights.length >= (this.config.maxLightCount-1)*2 ) {
+      this.maze.lights.shift();
+      this.maze.lights.shift();
+   }
+   this.maze.lights.push(x, y);
+};
