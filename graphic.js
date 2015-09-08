@@ -42,7 +42,7 @@ Graphic.prototype.init = function(hP) {
    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
 
    this.fsTriangle = this.CreateFullScreenTriangle();
-}
+};
 
 Graphic.prototype.initWebGL = function() {
    gl = null;
@@ -60,7 +60,7 @@ Graphic.prototype.initWebGL = function() {
       gl = null;
    }
    this.gl = gl;
-}
+};
 
 Graphic.prototype.CreateFullScreenTriangle = function (){
    var R = {};
@@ -78,7 +78,7 @@ Graphic.prototype.CreateFullScreenTriangle = function (){
    gl.bufferData(gl.ARRAY_BUFFER, uv, gl.STATIC_DRAW);
 
    return R;
-}
+};
 
 Graphic.prototype.drawFullScreenTriangle = function() {
    gl.enableVertexAttribArray(0);
@@ -88,24 +88,25 @@ Graphic.prototype.drawFullScreenTriangle = function() {
    gl.bindBuffer(gl.ARRAY_BUFFER, this.fsTriangle.uv);
    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
    gl.drawArrays(gl.TRIANGLES, 0, 3);
-}
+};
 
 Graphic.prototype.draw = function() {
    gl.viewport(0, 0, this.size.x, this.size.y);
    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
    this.drawFullScreenTriangle(this.fsTriangle);
-}
+};
 
 Graphic.prototype.loadProgramFile = function(vertexFile, fragmentFile, params) {
    params = params || {};
    var fragment = this.loadShaderFile(fragmentFile, params.define);
    var vertex = this.loadShaderFile(vertexFile, params.define);
-   return this.loadProgram(vertex, fragment, params.attribs);
-}
+   var program = this.loadProgram(vertex, fragment, params.attribs);
+   return program;
+};
 
 Graphic.prototype.loadProgram = function(vertex, fragment, attribs){
-   if (attribs == null) {
-      attribs = ["inVertex",'inUV']
+   if (!attribs) {
+      attribs = ["inVertex",'inUV'];
    }
    var program = gl.createProgram();
    gl.attachShader(program,vertex);
@@ -125,7 +126,7 @@ Graphic.prototype.loadProgram = function(vertex, fragment, attribs){
    }
    gl.validateProgram(program);
    console.log(gl.getProgramInfoLog(program));
-   var status = gl.getProgramParameter(program,gl.VALIDATE_STATUS);
+   status = gl.getProgramParameter(program,gl.VALIDATE_STATUS);
    if (!status && gl.isContextLost()){
       console.log("Error: program linking");
       gl.deleteProgram(program);
@@ -134,7 +135,7 @@ Graphic.prototype.loadProgram = function(vertex, fragment, attribs){
       return null;
    }
    return program;
-}
+};
 
 Graphic.prototype.loadShaderFile = function(file, define){
    var request = new XMLHttpRequest();
@@ -146,9 +147,9 @@ Graphic.prototype.loadShaderFile = function(file, define){
    }
    var type;
    if (file.search(/\.vert$/)>0) { 
-      type = gl.VERTEX_SHADER
+      type = gl.VERTEX_SHADER;
    } else if(file.search(/\.frag$/)>0) { 
-      type = gl.FRAGMENT_SHADER
+      type = gl.FRAGMENT_SHADER;
    } else {
       console.log("unknown shader type: " + file);
    }
@@ -158,10 +159,10 @@ Graphic.prototype.loadShaderFile = function(file, define){
    var shaderStr = defineStr + request.responseText;
 
    return this.loadShader(shaderStr, type);
-}
+};
 
 Graphic.prototype.loadShader = function(src, type){
-   if (!src || src==""){
+   if (!src || src===""){
       console.log("no shader source");
       return null;
    }
@@ -169,14 +170,14 @@ Graphic.prototype.loadShader = function(src, type){
    gl.shaderSource(shader, src);
    gl.compileShader(shader);
    console.log(gl.getShaderInfoLog(shader));
-   var status = gl.getShaderParameter(shader,gl.COMPILE_STATUS)
+   var status = gl.getShaderParameter(shader,gl.COMPILE_STATUS);
    if (!status && gl.isContextLost()){
       console.log("Error: shader compilation");
       gl.deleteShader(shader);
       return null;
    }
    return shader;
-}
+};
 
 Graphic.prototype.createDefineString = function(define) {
    define = define || {};
@@ -185,7 +186,7 @@ Graphic.prototype.createDefineString = function(define) {
       str += '#define '+key+' '+define[key]+'\n';
    });
    return str;
-}
+};
 
 Graphic.prototype.createFBO = function(params) {
    var fbo = gl.createFramebuffer();
@@ -203,20 +204,20 @@ Graphic.prototype.createFBO = function(params) {
       texture: texture,
       size: params.size
    };
-}
+};
 
 Graphic.prototype.drawToFBO = function(fbo) {
    gl.viewport(0, 0, fbo.size.x, fbo.size.y);
    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
    this.drawFullScreenTriangle(this.fsTriangle);
-}
+};
 
 Graphic.prototype.readFromFBO = function(fbo) {
    var pixels = new Uint8Array(fbo.size.x * fbo.size.y * 4);
    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
    gl.readPixels(0, 0, fbo.size.x, fbo.size.y, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
    return pixels;
-}
+};
 
 Graphic.prototype.createTexture = function(params) {
    var texture = gl.createTexture();
@@ -227,12 +228,102 @@ Graphic.prototype.createTexture = function(params) {
    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
    return texture;
-}
+};
 
 Graphic.prototype.updateTexture = function(params) {
    gl.bindTexture(gl.TEXTURE_2D, params.texture);
    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, params.size, params.size, 0, gl.RGBA, gl.UNSIGNED_BYTE, params.data);
-}
+};
+
+Graphic.prototype.getUniformsWrapper = function(program) {
+   var count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+   console.log(count);
+   var wrapper = {};
+
+   function addFunction(name, setFun, setFunV) {
+      var index = gl.getUniformLocation(program, name);
+      var fixedName = name.replace(/\[\d+\]/,'');
+      if (setFunV) {
+         Object.defineProperty(wrapper, fixedName, {
+            set: function (x) {
+               setFunV.call(gl, index, x);
+            }
+         });
+      }
+   }
+   
+   for (var i = 0; i < count; i++) {
+      var uniform = gl.getActiveUniform(program, i);
+      console.log(uniform);
+      var setFunction = null;
+      var setFunctionV = null;
+      switch(uniform.type) {
+         case gl.INT:
+         case gl.BOOL:
+         case gl.SAMPLER_2D:
+         case gl.SAMPLER_CUBE:
+            setFunction = gl.uniform1i;
+            setFunctionV = gl.uniform1iv;
+         break;
+         case gl.INT_VEC2:
+         case gl.BOOL_VEC2:
+            setFunction = gl.uniform2i;
+            setFunctionV = gl.uniform2iv;
+         break;
+         case gl.INT_VEC3:
+         case gl.BOOL_VEC3:
+            setFunction = gl.uniform3i;
+            setFunctionV = gl.uniform3iv;
+         break;
+         case gl.INT_VEC4:
+         case gl.BOOL_VEC4:
+            setFunction = gl.uniform4i;
+            setFunctionV = gl.uniform4iv;
+         break;
+         case gl.FLOAT:
+            setFunction = gl.uniform1f;
+            setFunctionV = gl.uniform1fv;
+         break;
+         case gl.FLOAT_VEC2:
+            setFunction = gl.uniform2f;
+            setFunctionV = gl.uniform2fv;
+         break;
+         case gl.FLOAT_VEC3:
+            setFunction = gl.uniform3f;
+            setFunctionV = gl.uniform3fv;
+         break;
+         case gl.FLOAT_VEC4:
+            setFunction = gl.uniform4f;
+            setFunctionV = gl.uniform4fv;
+         break;
+         case gl.FLOAT_MAT2:
+            setFunctionV = gl.uniformMatrix2fv;
+         break;
+         case gl.FLOAT_MAT3:
+            setFunctionV = gl.uniformMatrix3fv;
+         break;
+         case gl.FLOAT_MAT4:
+            setFunctionV = gl.uniformMatrix4fv;
+         break;
+         default:
+            setFunction = null;
+            setFunctionV = null;
+         break;
+      }
+      console.log(setFunction);
+      console.log(setFunctionV);
+      if (uniform.size > 1) {
+         setFunction = null;
+      }
+      if (setFunction === null && setFunctionV === null) {
+         throw("unsupported uniform type");
+      }
+      addFunction(uniform.name, setFunction, setFunctionV);
+      setFunction = null;
+      setFunctionV = null;
+   }
+   return wrapper;
+};
 
 top.Graphic = Graphic;
 })();

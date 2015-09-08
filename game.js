@@ -87,20 +87,14 @@ Game.prototype.init = function() {
          MAZE_SIZE: this.config.mazeSize.toString() + '.0'
       }
    });
-   this.mazePlayerPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'playerPos');
-   this.mazeExitPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'exitPos');
-   this.mazeTextureUniform = this.graphic.gl.getUniformLocation(this.mazeShader, 'maze');
-   this.mazeAmbient = this.graphic.gl.getUniformLocation(this.mazeShader, 'ambient');
-   this.mazeCameraPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'cameraPos');
-   this.mazeLightCount = this.graphic.gl.getUniformLocation(this.mazeShader, 'lightCount');
-   this.mazeLightPos = this.graphic.gl.getUniformLocation(this.mazeShader, 'lightPos');
+   this.mazeUni = this.graphic.getUniformsWrapper(this.mazeShader);
 
    this.mazeTexture = this.graphic.createTexture({
       size: this.config.mazeSize,
       data: null
    });
-   this.graphic.gl.uniform1i(this.mazeTextureUniform, 0 );
-   this.graphic.gl.uniform1i(this.mazeLightCount, 1 );
+   this.mazeUni.maze = [0];
+   this.mazeUni.lightCount = [1];
 
    this.distanceShader = this.graphic.loadProgramFile("./simple.vert","./maze.frag", {
       define: {
@@ -109,7 +103,7 @@ Game.prototype.init = function() {
       }
    });
    this.distanceFBO = this.graphic.createFBO({size: {x: 1, y: 1} });
-   this.distancePlayerPos = this.graphic.gl.getUniformLocation(this.distanceShader, 'playerPos');
+   this.distanceUni = this.graphic.getUniformsWrapper(this.distanceShader);
 
    this.graphic.gl.useProgram(this.mazeShader);
 
@@ -289,19 +283,21 @@ Game.prototype.changeGameState = function(state) {
 Game.prototype.updateGraphic = function(id) {
    "use strict";
    if (id == 1) {
-      this.graphic.gl.uniform2f(this.mazePlayerPos, this.player.pos.x, this.player.pos.y );
-      this.graphic.gl.uniform2f(this.mazeCameraPos, this.camera.pos.x, this.camera.pos.y );
-      this.graphic.gl.uniform2f(this.mazeExitPos, this.exitPos.x, this.exitPos.y );
-      this.graphic.gl.uniform1f(this.mazeAmbient, this.config.ambientLight );
-      this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
-      this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
       var lights = [this.player.pos.x, this.player.pos.y];
       lights.push.apply(lights, this.maze.lights);
-      console.log(lights);
-      this.graphic.gl.uniform2fv(this.mazeLightPos, lights);
-      this.graphic.gl.uniform1i(this.mazeLightCount, lights.length/2);
+
+      this.mazeUni.playerPos = [this.player.pos.x, this.player.pos.y];
+      this.mazeUni.exitPos = [this.exitPos.x, this.exitPos.y];
+      this.mazeUni.ambient = [this.config.ambientLight];
+      this.mazeUni.cameraPos = [this.camera.pos.x, this.camera.pos.y];
+      this.mazeUni.lightCount = [lights.length/2];
+      this.mazeUni.lightPos =  lights;
+
+      this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
+      this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
    } else {
-	   this.graphic.gl.uniform2f(this.distancePlayerPos, this.player.pos.x, this.player.pos.y );
+      this.distanceUni.playerPos = [this.player.pos.x, this.player.pos.y];
+
       this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
       this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
    }
