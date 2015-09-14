@@ -1,5 +1,5 @@
 /* This file is part of Maze.
- * Copyright (C) 2014 Grzegorz Wójcik
+ * Copyright (C) 2015 Grzegorz Wójcik
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-attribute vec3 inVertex;
-attribute vec2 inUV;
-uniform float aspect;
 
-varying vec2 uv;
-void main(){
-   gl_Position = vec4(inVertex.xy, 0, 1);
+precision highp float;
+varying highp vec2 uv;
+varying highp float dist;
 
-   uv = inUV * 2.0 - 1.0;
-   uv = ((uv+vec2(1.0, 1.0))*vec2(1.0, aspect))*16.0;
+void main() {
+   float x = length(uv);   
+   float d = smoothstep(10.0, 15.0, dist);
+   x = smoothstep(0.2 - 0.1*d, 0.4 - 0.2*d, x);
+   gl_FragColor = vec4( 1.0 - d, 1.0 - d, d, x);
 }

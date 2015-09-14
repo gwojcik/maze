@@ -1,5 +1,5 @@
 /* This file is part of Maze.
- * Copyright (C) 2014 Grzegorz Wójcik
+ * Copyright (C) 2015 Grzegorz Wójcik
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,14 +14,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 attribute vec3 inVertex;
 attribute vec2 inUV;
-uniform float aspect;
 
 varying vec2 uv;
+varying float dist;
+
+uniform float aspect;
+uniform vec2 exitPos;
+uniform vec2 cameraOffset;
 void main(){
-   gl_Position = vec4(inVertex.xy, 0, 1);
+   vec2 v = inVertex.xy;
+   vec2 vOffset = exitPos - cameraOffset;
+   dist = length(vOffset);
+   if (dist > 10.0) {
+      vOffset /= dist;
+      vOffset *= 10.0;
+   }
+   v += vOffset;
+   v *= (1.0/16.0);
+   v.y /= aspect;
+   gl_Position = vec4(v, 0, 1);
 
    uv = inUV * 2.0 - 1.0;
-   uv = ((uv+vec2(1.0, 1.0))*vec2(1.0, aspect))*16.0;
 }

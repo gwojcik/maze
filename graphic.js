@@ -90,11 +90,6 @@ Graphic.prototype.drawFullScreenTriangle = function() {
    gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
 
-Graphic.prototype.draw = function() {
-   gl.viewport(0, 0, this.size.x, this.size.y);
-   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-   this.drawFullScreenTriangle(this.fsTriangle);
-};
 
 Graphic.prototype.loadProgramFile = function(vertexFile, fragmentFile, params) {
    params = params || {};
@@ -209,7 +204,7 @@ Graphic.prototype.createFBO = function(params) {
 Graphic.prototype.drawToFBO = function(fbo) {
    gl.viewport(0, 0, fbo.size.x, fbo.size.y);
    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
-   this.drawFullScreenTriangle(this.fsTriangle);
+   this.drawFullScreenTriangle();
 };
 
 Graphic.prototype.readFromFBO = function(fbo) {

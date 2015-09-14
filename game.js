@@ -46,7 +46,7 @@ Game.prototype.init = function() {
       tileCount:    2 * 16,
       ambientLight: 0.0,
       logicFPS:     60,
-      mazeSize:     16,
+      mazeSize:     64,
       maxLightCount: 4
    };
 
@@ -93,8 +93,10 @@ Game.prototype.init = function() {
       size: this.config.mazeSize,
       data: null
    });
+   this.graphic.gl.useProgram(this.mazeShader);
    this.mazeUni.maze = [0];
    this.mazeUni.lightCount = [1];
+   this.mazeUni.aspect = [3.0/4.0];
 
    this.distanceShader = this.graphic.loadProgramFile("./simple.vert","./maze.frag", {
       define: {
@@ -104,6 +106,13 @@ Game.prototype.init = function() {
    });
    this.distanceFBO = this.graphic.createFBO({size: {x: 1, y: 1} });
    this.distanceUni = this.graphic.getUniformsWrapper(this.distanceShader);
+   this.graphic.gl.useProgram(this.distanceShader);
+   this.distanceUni.aspect = [3.0/4.0];
+
+   this.exitShader = this.graphic.loadProgramFile("./exit.vert", "./exit.frag");
+   this.exitUni = this.graphic.getUniformsWrapper(this.exitShader);
+   this.graphic.gl.useProgram(this.exitShader);
+   this.exitUni.aspect = [3.0/4.0];
 
    this.graphic.gl.useProgram(this.mazeShader);
 
@@ -164,7 +173,19 @@ Game.prototype.draw = function() {
 
       this.graphic.gl.useProgram(this.mazeShader);
       this.updateGraphic(1);
-      this.graphic.draw(this.mazeShader);
+
+      this.graphic.gl.viewport(0, 0, this.graphic.size.x, this.graphic.size.y);
+      this.graphic.gl.bindFramebuffer(this.graphic.gl.FRAMEBUFFER, null);
+      this.graphic.drawFullScreenTriangle();
+
+      this.graphic.gl.enable(this.graphic.gl.BLEND);
+      this.graphic.gl.blendFuncSeparate(this.graphic.gl.ONE_MINUS_SRC_ALPHA, this.graphic.gl.SRC_ALPHA,
+         this.graphic.gl.ONE, this.graphic.gl.ONE);
+      this.graphic.gl.useProgram(this.exitShader);
+      this.exitUni.exitPos = [this.exitPos.x, this.exitPos.y];
+      this.exitUni.cameraOffset = [this.camera.pos.x, this.camera.pos.y];
+      this.graphic.drawFullScreenTriangle();
+      this.graphic.gl.disable(this.graphic.gl.BLEND);
 
       this.checkEndConditions();
    }
@@ -289,7 +310,7 @@ Game.prototype.updateGraphic = function(id) {
       this.mazeUni.playerPos = [this.player.pos.x, this.player.pos.y];
       this.mazeUni.exitPos = [this.exitPos.x, this.exitPos.y];
       this.mazeUni.ambient = [this.config.ambientLight];
-      this.mazeUni.cameraPos = [this.camera.pos.x, this.camera.pos.y];
+      this.mazeUni.cameraOffset = [this.camera.pos.x - 16.0, this.camera.pos.y - 16 * (3.0/4.0)];
       this.mazeUni.lightCount = [lights.length/2];
       this.mazeUni.lightPos =  lights;
 

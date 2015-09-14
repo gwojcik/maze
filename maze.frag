@@ -19,7 +19,7 @@ precision highp float;
 varying highp vec2 uv;
 uniform vec2 playerPos;
 uniform vec2 exitPos;
-uniform vec2 cameraPos;
+uniform vec2 cameraOffset;
 uniform sampler2D maze;
 uniform float ambient;
 uniform vec2 lightPos[4];
@@ -140,9 +140,9 @@ float shadow(vec2 p, vec2 l) {
 
 void main() {
    float aspect = (3.0/4.0);
-   gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0);
+   gl_FragColor.w = 1.0;
 
-   vec2 pos = ((uv+vec2(1.0, 1.0))*vec2(1.0, aspect))*16.0;
+   vec2 pos = uv;
 
    #ifdef GET_DISTANCE
       pos = playerPos;
@@ -152,14 +152,9 @@ void main() {
       vec2 gradient = normalize(vec2(dx,dy));
       gl_FragColor.xyz = vec3(d - WALL_R, gradient*0.5 + vec2(0.5));
    #else
-      pos += cameraPos;
-      pos -= vec2(16.0, 16.0*aspect);
+      pos += cameraOffset;
       if ( distance(pos, playerPos) < 0.2) {
          gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0);
-         return;
-      }
-      if ( distance(pos, exitPos) < 0.4) {
-         gl_FragColor = vec4( 0.0, 0.0, 1.0, 1.0);
          return;
       }
       float shadowValue = ambient;
