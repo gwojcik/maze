@@ -118,7 +118,17 @@ float shadow(vec2 p, vec2 l) {
          dd2m /= v.x;
          dd2 = min(dd2, dd2m);
 
-         float dd = max(dd1,dd2);
+         float dd;
+         vec2 lInTile = abs(vec2(1.0) - vec2(0.5) - (tileL - newL));
+         if ( max(lInTile.x, lInTile.y) < 0.35) {
+            dd = max(dd1,dd2);
+         } else {
+            if (lInTile.x > lInTile.y) {
+               dd = dd1;
+            } else {
+               dd = dd2;
+            }
+         }
 
          if ( dd >= dist) {
             light = true;
