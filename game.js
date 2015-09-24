@@ -95,6 +95,7 @@ Game.prototype.init = function() {
    });
    this.graphic.gl.useProgram(this.mazeShader);
    this.mazeUni.maze = [0];
+   this.mazeUni.shadowTex = [1];
    this.mazeUni.lightCount = [1];
    this.mazeUni.aspect = [3.0/4.0];
 
@@ -115,6 +116,18 @@ Game.prototype.init = function() {
    this.exitUni.aspect = [3.0/4.0];
 
    this.graphic.gl.useProgram(this.mazeShader);
+
+   this.shadowFBO = this.graphic.createFBO({size: {x: 1024, y: 1}});
+   this.shadowShader = this.graphic.loadProgramFile("./shadow.vert", "./shadow.frag", {
+      define: {
+         MAZE_SIZE: this.config.mazeSize.toString() + '.0'
+      }
+   });
+   this.shadowUni = this.graphic.getUniformsWrapper(this.shadowShader);
+   this.graphic.gl.useProgram(this.shadowShader);
+   this.shadowUni.lightR = [100];
+   this.shadowUni.lightPos = [0,0];
+   this.shadowUni.maze = [0];
 
    this.genNewMaze = true;
 
@@ -170,6 +183,10 @@ Game.prototype.draw = function() {
          this.keyInput.newLight = false;
          this.addLight(this.player.pos.x, this.player.pos.y);
       }
+
+      this.graphic.gl.useProgram(this.shadowShader);
+      this.shadowUni.lightPos = [this.player.pos.x, this.player.pos.y];
+      this.graphic.drawToFBO(this.shadowFBO, this.distanceShader);
 
       this.graphic.gl.useProgram(this.mazeShader);
       this.updateGraphic(1);
@@ -316,6 +333,8 @@ Game.prototype.updateGraphic = function(id) {
 
       this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE0);
       this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
+      this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE1);
+      this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.shadowFBO.texture);
    } else {
       this.distanceUni.playerPos = [this.player.pos.x, this.player.pos.y];
 

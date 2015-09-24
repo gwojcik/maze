@@ -21,12 +21,14 @@ uniform vec2 playerPos;
 uniform vec2 exitPos;
 uniform vec2 cameraOffset;
 uniform sampler2D maze;
+uniform sampler2D shadowTex;
 uniform float ambient;
 uniform vec2 lightPos[4];
 uniform int lightCount;
 
 #define WALL_R 0.1
 #define WALL_RO 0.11
+#define M_PI 3.14
 
 float mazeDistance(vec2 pos) {
    vec2 tile = ceil(pos);
@@ -168,12 +170,22 @@ void main() {
          return;
       }
       float shadowValue = ambient;
-      for (int i = 0; i < 4; i++) {
-         if (i < lightCount) {
-            shadowValue += shadow(pos, lightPos[i]);
-         }
-      }
-      gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadowValue;
+      //for (int i = 0; i < 4; i++) {
+      //   if (i < lightCount) {
+      //      shadowValue += shadow(pos, lightPos[i]);
+      //   }
+      //}
+      vec2 lightDir = normalize(pos - lightPos[0]);
+      float lightDistance = distance(pos, lightPos[0]);
+      float shadowTexCoord = atan(lightDir.x, lightDir.y)/M_PI/2.0 + 0.5;
+      vec2 shadowRaw = texture2D(shadowTex, vec2(shadowTexCoord,0.0)).rg;
+      float shadowDistance = shadowRaw.r + shadowRaw.g*255.0;
+      float lightValue = 2.0/(lightDistance * lightDistance);
+      gl_FragColor.xyz = vec3(smoothstep( 0.0, 0.2, shadowDistance - lightDistance) * lightValue);
+
+      //gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadowValue;
+      //gl_FragColor.xyz = vec3(shadowValue);
+      //gl_FragColor.x = texture2D(shadowTex, vec2(uv*(1.0/16.0))).r;
       //vec2 tile = ceil((pos+vec2(1.0, 1.0))/MAZE_SIZE);
       //gl_FragColor.r *= (mod(tile.x, 2.0) < 1.0 ^^ mod(tile.y, 2.0) < 1.0)  ? 1.0 : 0.0;
    #endif
