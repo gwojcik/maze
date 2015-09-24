@@ -232,10 +232,9 @@ Graphic.prototype.updateTexture = function(params) {
 
 Graphic.prototype.getUniformsWrapper = function(program) {
    var count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-   console.log(count);
    var wrapper = {};
 
-   function addFunction(name, setFun, setFunV) {
+   function addFunction(name, setFunV) {
       var index = gl.getUniformLocation(program, name);
       var fixedName = name.replace(/\[\d+\]/,'');
       if (setFunV) {
@@ -249,46 +248,36 @@ Graphic.prototype.getUniformsWrapper = function(program) {
    
    for (var i = 0; i < count; i++) {
       var uniform = gl.getActiveUniform(program, i);
-      console.log(uniform);
-      var setFunction = null;
       var setFunctionV = null;
       switch(uniform.type) {
          case gl.INT:
          case gl.BOOL:
          case gl.SAMPLER_2D:
          case gl.SAMPLER_CUBE:
-            setFunction = gl.uniform1i;
             setFunctionV = gl.uniform1iv;
          break;
          case gl.INT_VEC2:
          case gl.BOOL_VEC2:
-            setFunction = gl.uniform2i;
             setFunctionV = gl.uniform2iv;
          break;
          case gl.INT_VEC3:
          case gl.BOOL_VEC3:
-            setFunction = gl.uniform3i;
             setFunctionV = gl.uniform3iv;
          break;
          case gl.INT_VEC4:
          case gl.BOOL_VEC4:
-            setFunction = gl.uniform4i;
             setFunctionV = gl.uniform4iv;
          break;
          case gl.FLOAT:
-            setFunction = gl.uniform1f;
             setFunctionV = gl.uniform1fv;
          break;
          case gl.FLOAT_VEC2:
-            setFunction = gl.uniform2f;
             setFunctionV = gl.uniform2fv;
          break;
          case gl.FLOAT_VEC3:
-            setFunction = gl.uniform3f;
             setFunctionV = gl.uniform3fv;
          break;
          case gl.FLOAT_VEC4:
-            setFunction = gl.uniform4f;
             setFunctionV = gl.uniform4fv;
          break;
          case gl.FLOAT_MAT2:
@@ -301,20 +290,13 @@ Graphic.prototype.getUniformsWrapper = function(program) {
             setFunctionV = gl.uniformMatrix4fv;
          break;
          default:
-            setFunction = null;
             setFunctionV = null;
          break;
       }
-      console.log(setFunction);
-      console.log(setFunctionV);
-      if (uniform.size > 1) {
-         setFunction = null;
-      }
-      if (setFunction === null && setFunctionV === null) {
+      if (setFunctionV === null) {
          throw("unsupported uniform type");
       }
-      addFunction(uniform.name, setFunction, setFunctionV);
-      setFunction = null;
+      addFunction(uniform.name, setFunctionV);
       setFunctionV = null;
    }
    return wrapper;
