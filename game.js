@@ -117,7 +117,7 @@ Game.prototype.init = function() {
 
    this.graphic.gl.useProgram(this.mazeShader);
 
-   this.shadowFBO = this.graphic.createFBO({size: {x: 1024, y: 1}});
+   this.shadowFBO = this.graphic.createFBO({size: {x: 1024, y: 4}});
    this.shadowShader = this.graphic.loadProgramFile("./shadow.vert", "./shadow.frag", {
       define: {
          MAZE_SIZE: this.config.mazeSize.toString() + '.0'
@@ -126,7 +126,6 @@ Game.prototype.init = function() {
    this.shadowUni = this.graphic.getUniformsWrapper(this.shadowShader);
    this.graphic.gl.useProgram(this.shadowShader);
    this.shadowUni.lightR = [100];
-   this.shadowUni.lightPos = [0,0];
    this.shadowUni.maze = [0];
 
    this.genNewMaze = true;
@@ -185,7 +184,8 @@ Game.prototype.draw = function() {
       }
 
       this.graphic.gl.useProgram(this.shadowShader);
-      this.shadowUni.lightPos = [this.player.pos.x, this.player.pos.y];
+      var lights = this.getLights();
+      this.shadowUni.light = lights;
       this.graphic.drawToFBO(this.shadowFBO, this.distanceShader);
 
       this.graphic.gl.useProgram(this.mazeShader);
@@ -318,16 +318,22 @@ Game.prototype.changeGameState = function(state) {
    }
 };
 
+Game.prototype.getLights = function() {
+   var lights = [this.player.pos.x, this.player.pos.y];
+   lights.push.apply(lights, this.maze.lights);
+   return lights;
+};
+
 Game.prototype.updateGraphic = function(id) {
    "use strict";
    if (id == 1) {
-      var lights = [this.player.pos.x, this.player.pos.y];
-      lights.push.apply(lights, this.maze.lights);
+      var lights = this.getLights();
 
       this.mazeUni.playerPos = [this.player.pos.x, this.player.pos.y];
       this.mazeUni.exitPos = [this.exitPos.x, this.exitPos.y];
       this.mazeUni.ambient = [this.config.ambientLight];
       this.mazeUni.cameraOffset = [this.camera.pos.x - 16.0, this.camera.pos.y - 16 * (3.0/4.0)];
+
       this.mazeUni.lightCount = [lights.length/2];
       this.mazeUni.lightPos =  lights;
 

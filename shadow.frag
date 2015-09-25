@@ -17,8 +17,8 @@
 
 precision highp float;
 varying highp vec2 uv;
-uniform vec2 lightPos;
 uniform float lightR;
+uniform vec2 light[4];
 uniform sampler2D maze;
 
 #define WALL_R 0.1
@@ -88,7 +88,21 @@ float shadow(vec2 p, vec2 l) {
 }
 
 void main() {
-   float angle = uv.x * M_PI;
+   float angle = uv.x;
+
+   vec2 lightPos;
+
+   int i = int(uv.y*4.0);
+   if (i == 0) {
+      lightPos = light[0];
+   } else if (i == 1) {
+      lightPos = light[1];
+   } else if (i == 2) {
+      lightPos = light[2];
+   } else {
+      lightPos = light[3];
+   }
+
    vec2 target = lightPos + vec2( sin( angle ), cos( angle )) * 100.0;
 
    float dist = shadow(target, lightPos);

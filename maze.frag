@@ -150,6 +150,15 @@ float shadow(vec2 p, vec2 l) {
    return 0.0;
 }
 
+float shadowMapShadow(vec2 p, vec2 l, float lightId) {
+   vec2 lightDir = normalize(p - l);
+   float lightDistance = distance(p, l);
+   float shadowTexCoord = atan(lightDir.x, lightDir.y)/M_PI/2.0 + 0.5;
+   vec2 shadowRaw = texture2D(shadowTex, vec2(shadowTexCoord, lightId/4.0)).rg;
+   float shadowDistance = shadowRaw.r + shadowRaw.g*255.0;
+   return smoothstep( 0.0, 0.2, shadowDistance - lightDistance) * (2.0/(lightDistance * lightDistance));
+}
+
 void main() {
    float aspect = (3.0/4.0);
    gl_FragColor.w = 1.0;
@@ -170,18 +179,12 @@ void main() {
          return;
       }
       float shadowValue = ambient;
-      //for (int i = 0; i < 4; i++) {
-      //   if (i < lightCount) {
-      //      shadowValue += shadow(pos, lightPos[i]);
-      //   }
-      //}
-      vec2 lightDir = normalize(pos - lightPos[0]);
-      float lightDistance = distance(pos, lightPos[0]);
-      float shadowTexCoord = atan(lightDir.x, lightDir.y)/M_PI/2.0 + 0.5;
-      vec2 shadowRaw = texture2D(shadowTex, vec2(shadowTexCoord,0.0)).rg;
-      float shadowDistance = shadowRaw.r + shadowRaw.g*255.0;
-      float lightValue = 2.0/(lightDistance * lightDistance);
-      gl_FragColor.xyz = vec3(smoothstep( 0.0, 0.2, shadowDistance - lightDistance) * lightValue);
+      for (int i = 0; i < 4; i++) {
+         if (i < lightCount) {
+            shadowValue += shadowMapShadow(pos, lightPos[i], float(i));
+         }
+      }
+      gl_FragColor.xyz = vec3(shadowValue);
 
       //gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadowValue;
       //gl_FragColor.xyz = vec3(shadowValue);
