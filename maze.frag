@@ -22,6 +22,7 @@ uniform vec2 exitPos;
 uniform vec2 cameraOffset;
 uniform sampler2D maze;
 uniform sampler2D shadowTex;
+uniform sampler2D regions;
 uniform float ambient;
 uniform vec2 lightPos[4];
 uniform int lightCount;
@@ -150,13 +151,47 @@ float shadow(vec2 p, vec2 l) {
    return 0.0;
 }
 
+vec2 rot90(vec2 V) {
+   return vec2(-V.y, V.x);
+}
+
 float shadowMapShadow(vec2 p, vec2 l, float lightId) {
-   vec2 lightDir = normalize(p - l);
-   float lightDistance = distance(p, l);
+   vec2 lightDir = p - l;
+   float lightDistance = length(lightDir);
    float shadowTexCoord = atan(lightDir.x, lightDir.y)/M_PI/2.0 + 0.5;
    vec2 shadowRaw = texture2D(shadowTex, vec2(shadowTexCoord, lightId/4.0)).rg;
    float shadowDistance = shadowRaw.r + shadowRaw.g*255.0;
-   return smoothstep( 0.0, 0.2, shadowDistance - lightDistance) * (2.0/(lightDistance * lightDistance));
+   return smoothstep( 0.0, 0.2, shadowDistance - lightDistance);
+}
+
+float indirect(vec2 p, vec2 l, float lightId) {
+   vec2 lightDir = p - l;
+   float lightDistance = length(lightDir);
+   vec2 nLightDir = normalize(lightDir);
+   vec2 v = rot90(nLightDir);
+
+   float value = 0.0;
+
+   for ( float i = -1.0; i < 1.0; i += 0.1) {
+      vec2 dir = (p + v * i) - l;
+      float shadowTexCoord = atan(dir.x, dir.y)/M_PI/2.0 + 0.5;
+      vec2 shadowRaw = texture2D(shadowTex, vec2(shadowTexCoord, lightId/4.0)).rg;
+      float shadowDistance = shadowRaw.r + shadowRaw.g*255.0;
+      if ( abs( lightDistance - shadowDistance) < 1.0) {
+         vec2 nDir = normalize(dir);
+         vec2 samplePos = nDir*shadowDistance + l;
+         float d = mazeDistance(samplePos);
+         float dx = mazeDistance(samplePos + vec2(0.01, 0.00)) - d;
+         float dy = mazeDistance(samplePos + vec2(0.00, 0.01)) - d;
+         vec2 gradient = vec2(dx,dy);
+         float v = dot( normalize(samplePos - p), -normalize(gradient));
+         if ( v > 0.0) {
+            value += max (0.0, 1.0 - distance(p, samplePos)) * v;
+         }
+      }
+   }
+   
+   return value * 0.2;
 }
 
 void main() {
@@ -179,12 +214,21 @@ void main() {
          return;
       }
       float shadowValue = ambient;
+      float regionP = dot(texture2D(regions,ceil(pos)/MAZE_SIZE).rg, vec2(1.0, 256.0));
       for (int i = 0; i < 4; i++) {
          if (i < lightCount) {
-            shadowValue += shadowMapShadow(pos, lightPos[i], float(i));
+            vec2 l = lightPos[i];
+            float regionL = dot(texture2D(regions,ceil(l)/MAZE_SIZE).rg, vec2(1.0, 256.0));
+            if (regionL == regionP) {
+               shadowValue += (
+                  shadowMapShadow(pos, lightPos[i], float(i)) + 
+                  indirect(pos, lightPos[i], float(i))
+               ) * (2.0/( dot(pos-l, pos-l)));
+            }
          }
       }
-      gl_FragColor.xyz = vec3(shadowValue);
+      gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos)) * shadowValue);
+      //gl_FragColor.xy = vec2(sin(regionP * 10.0), sin(regionP * 124.0 + 4.0));
 
       //gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadowValue;
       //gl_FragColor.xyz = vec3(shadowValue);

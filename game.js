@@ -46,7 +46,7 @@ Game.prototype.init = function() {
       tileCount:    2 * 16,
       ambientLight: 0.0,
       logicFPS:     60,
-      mazeSize:     64,
+      mazeSize:     16,
       maxLightCount: 4
    };
 
@@ -93,9 +93,14 @@ Game.prototype.init = function() {
       size: this.config.mazeSize,
       data: null
    });
+   this.mazeRegionTexture = this.graphic.createTexture({
+      size: this.config.mazeSize,
+      data: null
+   });
    this.graphic.gl.useProgram(this.mazeShader);
    this.mazeUni.maze = [0];
    this.mazeUni.shadowTex = [1];
+   this.mazeUni.regions = [2];
    this.mazeUni.lightCount = [1];
    this.mazeUni.aspect = [3.0/4.0];
 
@@ -341,6 +346,8 @@ Game.prototype.updateGraphic = function(id) {
       this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeTexture);
       this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE1);
       this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.shadowFBO.texture);
+      this.graphic.gl.activeTexture(this.graphic.gl.TEXTURE2);
+      this.graphic.gl.bindTexture(this.graphic.gl.TEXTURE_2D, this.mazeRegionTexture);
    } else {
       this.distanceUni.playerPos = [this.player.pos.x, this.player.pos.y];
 
@@ -401,10 +408,25 @@ Game.prototype.createNewMaze = function() {
 
    var regions = this.gen.connectedMazeRegions(mazeData, {size: this.config.mazeSize});
 
+   var regions8ub = new Uint8Array(regions.length*4);
+   for(var i = 0; i< regions.length; i++) {
+      var value = regions[i];
+      regions8ub[i*4 + 0] = value & 0xFF;
+      regions8ub[i*4 + 1] = (value >> 8)  & 0xFF;
+      regions8ub[i*4 + 2] = (value >> 16) & 0xFF;
+      regions8ub[i*4 + 3] = (value >> 24) & 0xff;
+   }
+
    this.graphic.updateTexture({
       texture: this.mazeTexture,
       size: this.config.mazeSize,
       data: mazeData
+   });
+
+   this.graphic.updateTexture({
+      texture: this.mazeRegionTexture,
+      size: this.config.mazeSize,
+      data: regions8ub
    });
 
    var success = this.addStartAndExit({
