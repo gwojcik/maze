@@ -229,6 +229,7 @@ void main() {
       }
       gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos)) * shadowValue);
       //gl_FragColor.xy = vec2(sin(regionP * 10.0), sin(regionP * 124.0 + 4.0));
+      gl_FragColor.xyz *= smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos));
 
       //gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadowValue;
       //gl_FragColor.xyz = vec3(shadowValue);

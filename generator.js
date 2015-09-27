@@ -79,6 +79,17 @@ Gen.prototype.maze = function(params) {
          i += 4;
       }
    }
+
+   var calcPos = this.getCalcPosFun(params.size, 4);
+   for (i = 0; i < params.size; i++) {
+      for (var j = 0; j < 4; j++) {
+         pos = calcPos(i,0);
+         data[pos + j] = 0;
+         pos = calcPos(0,i);
+         data[pos + j] = 0;
+      }
+   }
+
    var structureData = this.mazeStructure(data, params);
    return structureData;
 }
@@ -106,12 +117,12 @@ Gen.prototype.connectedMazeRegions = function(data, params) {
             }
          }
          if (data[pos + 3] > 0) {
-            var tmp = newData[calcPos1(x - 1, y)];
+            tmp = newData[calcPos1(x - 1, y)];
             if (tmp > 0) {
                neighbors.push(tmp);
             }
          }
-         if (neighbors.length == 0) {
+         if (neighbors.length === 0) {
             pos = calcPos1(x,y);
             label ++;
             newData[pos] = label;
@@ -119,12 +130,21 @@ Gen.prototype.connectedMazeRegions = function(data, params) {
             linked[label].add(label);
          } else {
             var min = Infinity;
-            neighbors.forEach(function(i) {
-               min = (i < min) ? i : min;
-            });
-            neighbors.forEach(function(i) {
-               linked[i].add(min);
-            })
+            if ( neighbors.length > 1 ) {
+               var max = -Infinity;
+               neighbors.forEach(function(i) {
+                  min = (i < min) ? i : min;
+                  max = (i > max) ? i : max;
+               });
+               linked[max].forEach(function(i) {
+                  linked[min].add(i);
+               });
+               linked[min].forEach(function(i) {
+                  linked[i] = linked[min];
+               });
+            } else {
+               min = neighbors[0];
+            }
             pos = calcPos1(x,y);
             newData[pos] = min;
          }
@@ -132,16 +152,53 @@ Gen.prototype.connectedMazeRegions = function(data, params) {
    }
 
    var processedLinks = [];
-   var linkedObj = {};
-   linked.forEach(function(i, key) {
+
+   linked.forEach(function(i, keyI) {
       var min = Infinity;
-      linkedObj[key] = [];
-      i.forEach(function(i) {
-         linkedObj[key].push(i);
-         min = (i < min) ? i : min;
+      var count = 0;
+      var allLabels = new Set();
+      i.forEach(function(j) {
+         allLabels.add(j);
       });
-      processedLinks[key] = min;
+      while(count < allLabels.length) {
+         count = allLabels.length;
+         allLabels.forEach(function(j) {
+            linked.forEach(function(k) {
+               if (k.has(j)) {
+                  k.forEach(function(l) {
+                     allLabels.add(l);
+                  });
+               }
+            });
+         });
+      }
+
+      allLabels.forEach(function(j) {
+         min = j < min ? j : min;
+      });
+
+      processedLinks[keyI] = min;
    });
+
+   //var linkedObj = {};
+   //linked.forEach(function(i, key) {
+   //   var min = Infinity;
+   //   linkedObj[key] = linkedObj[key] || new Set();
+   //   i.forEach(function(i) {
+   //      linkedObj[key].add(i);
+   //      linkedObj[i] = linkedObj[i] || new Set();
+   //      linkedObj[i].add(key);
+   //   });
+   //});
+
+   //Object.keys(linkedObj).forEach(function(x) {
+   //   var min = Infinity;
+   //   linkedObj[x].forEach(function(i) {
+   //      min = i < min ? i : min;
+   //   });
+   //   processedLinks[x] = min;
+   //});
+
 
    for (var y = 0; y < params.size; y++) {
       for (var x = 0; x < params.size; x++) {
@@ -248,5 +305,6 @@ Gen.prototype.mazeStructure = function(data, params) {
          y ++;
       }
    }
+
    return newData;
-}
+};

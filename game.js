@@ -46,7 +46,7 @@ Game.prototype.init = function() {
       tileCount:    2 * 16,
       ambientLight: 0.0,
       logicFPS:     60,
-      mazeSize:     16,
+      mazeSize:     64,
       maxLightCount: 4
    };
 
