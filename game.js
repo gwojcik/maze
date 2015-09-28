@@ -32,6 +32,8 @@ Game.prototype.init = function() {
    this.graphic = new Graphic();
    this.graphic.init({canvas: 'gl'});
 
+   this.graphic.addCommonGLSLCode("./common.glsl");
+
    this.gen = new Gen();
 
    var time = new Date();

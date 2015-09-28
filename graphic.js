@@ -34,6 +34,7 @@ Graphic.prototype.init = function(hP) {
    this.canvas = document.getElementById(hP.canvas);
    this.size = {x: this.canvas.width, y: this.canvas.height};
    this.initWebGL();
+   this.commonShaderStr = "";
 
    gl.clearColor(1.0, 0.0, 0.0, 1.0);
    gl.clear(gl.COLOR_BUFFER_BIT);
@@ -132,14 +133,19 @@ Graphic.prototype.loadProgram = function(vertex, fragment, attribs){
    return program;
 };
 
-Graphic.prototype.loadShaderFile = function(file, define){
+Graphic.prototype.loadFileSync = function(file, mimeType) {
    var request = new XMLHttpRequest();
    request.open('GET', file, false);
    request.overrideMimeType("x-shader/x-fragment");
    request.send();
    if (request.status != 200){
-      console.log("shader file " + file + " download error("+request.status+"): " + request.statusText);
+      console.log("file " + file + " download error("+request.status+"): " + request.statusText);
    }
+   return request.responseText;
+};
+
+Graphic.prototype.loadShaderFile = function(file, define){
+   var shaderStr = this.loadFileSync(file, "x-shader/x-fragment");
    var type;
    if (file.search(/\.vert$/)>0) { 
       type = gl.VERTEX_SHADER;
@@ -151,18 +157,16 @@ Graphic.prototype.loadShaderFile = function(file, define){
 
    var defineStr = this.createDefineString(define);
 
-   var shaderStr = defineStr + request.responseText;
-
-   return this.loadShader(shaderStr, type);
+   return this.loadShader(shaderStr, defineStr, type);
 };
 
-Graphic.prototype.loadShader = function(src, type){
+Graphic.prototype.loadShader = function(src, define, type){
    if (!src || src===""){
       console.log("no shader source");
       return null;
    }
    var shader = gl.createShader(type);
-   gl.shaderSource(shader, src);
+   gl.shaderSource(shader, define + this.commonShaderStr + src);
    gl.compileShader(shader);
    console.log(gl.getShaderInfoLog(shader));
    var status = gl.getShaderParameter(shader,gl.COMPILE_STATUS);
@@ -300,6 +304,11 @@ Graphic.prototype.getUniformsWrapper = function(program) {
       setFunctionV = null;
    }
    return wrapper;
+};
+
+Graphic.prototype.addCommonGLSLCode = function(file) {
+   var shaderFileStr = this.loadFileSync(file, "x-shader/x-fragment");
+   this.commonShaderStr += shaderFileStr;
 };
 
 top.Graphic = Graphic;

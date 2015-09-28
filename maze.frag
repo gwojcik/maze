@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-precision highp float;
 varying highp vec2 uv;
+
 uniform vec2 playerPos;
 uniform vec2 exitPos;
 uniform vec2 cameraOffset;
@@ -26,54 +26,6 @@ uniform sampler2D regions;
 uniform float ambient;
 uniform vec2 lightPos[4];
 uniform int lightCount;
-
-#define WALL_R 0.1
-#define WALL_RO 0.11
-#define M_PI 3.14
-
-float mazeDistance(vec2 pos) {
-   vec2 tile = ceil(pos);
-   /*  a
-      ┏━┓
-     d┃ ┃b
-      ┗━┛
-       c
-   */
-   bool a,b,c,d;
-
-   bvec4 tileData = bvec4(texture2D(maze,tile/MAZE_SIZE));
-   a = tileData.x;
-   b = tileData.y;
-   c = tileData.z;
-   d = tileData.w;
-
-   float dist;
-   vec2 p = fract(pos);
-
-   dist = dot(p,p);
-   vec2 x = p - vec2(1.0, 1.0);
-   dist = min(dist,dot(x,x));
-   x = p - vec2(0.0, 1.0);
-   dist = min(dist,dot(x,x));
-   x = p - vec2(1.0, 0.0);
-   dist = min(dist,dot(x,x));
-   dist = sqrt(dist);
-
-   if (!a) {
-      dist = min(dist, 1.0 - p.y);
-   }
-   if (!c) {
-      dist = min(dist, p.y);
-   }
-   if (!b) {
-      dist = min(dist, 1.0 - p.x);
-   }
-   if (!d) {
-      dist = min(dist, p.x);
-   }
-
-   return dist;
-}
 
 float shadow(vec2 p, vec2 l) {
    vec2 tileP = ceil(p);
@@ -180,9 +132,9 @@ float indirect(vec2 p, vec2 l, float lightId) {
       if ( abs( lightDistance - shadowDistance) < 1.0) {
          vec2 nDir = normalize(dir);
          vec2 samplePos = nDir*shadowDistance + l;
-         float d = mazeDistance(samplePos);
-         float dx = mazeDistance(samplePos + vec2(0.01, 0.00)) - d;
-         float dy = mazeDistance(samplePos + vec2(0.00, 0.01)) - d;
+         float d = mazeDistance(samplePos, maze);
+         float dx = mazeDistance(samplePos + vec2(0.01, 0.00), maze) - d;
+         float dy = mazeDistance(samplePos + vec2(0.00, 0.01), maze) - d;
          vec2 gradient = vec2(dx,dy);
          float v = dot( normalize(samplePos - p), -normalize(gradient));
          if ( v > 0.0) {
@@ -202,9 +154,9 @@ void main() {
 
    #ifdef GET_DISTANCE
       pos = playerPos;
-      float d = mazeDistance(pos);
-      float dx = mazeDistance(pos + vec2(0.01, 0.00)) - d;
-      float dy = mazeDistance(pos + vec2(0.00, 0.01)) - d;
+      float d = mazeDistance(pos, maze);
+      float dx = mazeDistance(pos + vec2(0.01, 0.00), maze) - d;
+      float dy = mazeDistance(pos + vec2(0.00, 0.01), maze) - d;
       vec2 gradient = normalize(vec2(dx,dy));
       gl_FragColor.xyz = vec3(d - WALL_R, gradient*0.5 + vec2(0.5));
    #else
@@ -227,9 +179,9 @@ void main() {
             }
          }
       }
-      gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos)) * shadowValue);
+      gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos, maze)) * shadowValue);
       //gl_FragColor.xy = vec2(sin(regionP * 10.0), sin(regionP * 124.0 + 4.0));
-      gl_FragColor.xyz *= smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos));
+      //gl_FragColor.xyz *= smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos));
 
       //gl_FragColor.xyz = vec3(smoothstep(WALL_R, WALL_R + 0.05, mazeDistance(pos))) * shadowValue;
       //gl_FragColor.xyz = vec3(shadowValue);
