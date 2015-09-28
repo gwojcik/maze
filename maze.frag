@@ -124,19 +124,29 @@ float indirect(vec2 p, vec2 l, float lightId) {
 
    float value = 0.0;
 
-   for ( float i = -1.0; i < 1.0; i += 0.1) {
+   float minShadowAngle;
+   float shadowAngleInc;
+   {
+      vec2 dir = (p - v) - l;
+      minShadowAngle = atan(dir.x, dir.y)/M_PI/2.0 + 0.5;
+      dir = (p + v) - l;
+      float maxShadowAngle = atan(dir.x, dir.y)/M_PI/2.0 + 0.5;
+      if (maxShadowAngle > minShadowAngle) {
+         minShadowAngle += 1.0;
+      }
+      shadowAngleInc = (maxShadowAngle - minShadowAngle);
+   }
+
+   for ( float i = -1.0; i < 1.0; i += 0.125) {
       vec2 dir = (p + v * i) - l;
-      float shadowTexCoord = atan(dir.x, dir.y)/M_PI/2.0 + 0.5;
-      vec2 shadowRaw = texture2D(shadowTex, vec2(shadowTexCoord, lightId/4.0)).rg;
+      float shadowTexCoord = minShadowAngle + (i+1.0)*0.5*shadowAngleInc;
+      vec4 shadowRaw = texture2D(shadowTex, vec2(shadowTexCoord, lightId/4.0));
       float shadowDistance = shadowRaw.r + shadowRaw.g*255.0;
+      vec2 N = ((shadowRaw.ba) - 0.5) * 2.0;
       if ( abs( lightDistance - shadowDistance) < 1.0) {
          vec2 nDir = normalize(dir);
          vec2 samplePos = nDir*shadowDistance + l;
-         float d = mazeDistance(samplePos, maze);
-         float dx = mazeDistance(samplePos + vec2(0.01, 0.00), maze) - d;
-         float dy = mazeDistance(samplePos + vec2(0.00, 0.01), maze) - d;
-         vec2 gradient = vec2(dx,dy);
-         float v = dot( normalize(samplePos - p), -normalize(gradient));
+         float v = dot( normalize(samplePos - p), -N);
          if ( v > 0.0) {
             value += max (0.0, 1.0 - distance(p, samplePos)) * v;
          }

@@ -106,11 +106,20 @@ void main() {
    vec2 target = lightPos + vec2( sin( angle ), cos( angle )) * 100.0;
 
    float dist = shadow(target, lightPos);
+
+   vec2 samplePos = normalize(target - lightPos) * dist + lightPos;
+   float d = mazeDistance(samplePos, maze);
+   float dx = mazeDistance(samplePos + vec2(0.01, 0.00), maze) - d;
+   float dy = mazeDistance(samplePos + vec2(0.00, 0.01), maze) - d;
+   vec2 N = normalize(vec2(dx,dy));
+
    vec4 codedDist;
    codedDist.r = fract(dist);
    dist -= codedDist.r;
    dist /= 255.0;
    codedDist.g = fract(dist);
+   codedDist.b = N.x * 0.5 + 0.5;
+   codedDist.a = N.y * 0.5 + 0.5;
    gl_FragColor.xyzw = vec4(codedDist);
 }
 
